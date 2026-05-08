@@ -230,14 +230,17 @@ By proceeding with the initial payment, I hereby accept the terms and conditions
   doc.save(`WiredNomad_Agreement_${refCode}.pdf`);
   // --- 7. TRIGGER EMAIL NOTIFICATION ---
   const pdfBase64 = doc.output('datauristring').split(',')[1]; // Get raw base64 data
-  fetch('../api/send-agreement', {
+  fetch('/api/send-agreement', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       pdfBase64,
       refCode
     }),
-  }).catch(err => console.error("Email notification failed:", err));
+  }).then(res => {
+  if (!res.ok) console.error("Server responded with error:", res.statusText);
+  else console.log("Email trigger successful");
+}).catch(err => console.error("Email notification failed:", err));
 
   // --- 8. SAVE FOR USER ---
   doc.save(`WiredNomad_Agreement_${refCode}.pdf`);
