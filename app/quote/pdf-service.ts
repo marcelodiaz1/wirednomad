@@ -230,7 +230,7 @@ By proceeding with the initial payment, I hereby accept the terms and conditions
   doc.save(`WiredNomad_Agreement_${refCode}.pdf`);
   // --- 7. TRIGGER EMAIL NOTIFICATION ---
   const pdfBase64 = doc.output('datauristring').split(',')[1]; // Get raw base64 data
-  fetch('/api/send-agreement', {
+  fetch('./api/send-agreement', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

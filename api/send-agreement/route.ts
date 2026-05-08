@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const { pdfBase64, refCode } = await req.json();
 
     await resend.emails.send({
-      from: 'System <notifications@wirednomad.xyz>',
+      from: 'System <contact@wirednomad.xyz>',
       to: 'contact@wirednomad.xyz',
       subject: `New Agreement Generated: ${refCode}`,
       text: `A new service agreement has been generated and downloaded by a user. Ref: ${refCode}`,
