@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb', // Increase if the PDF is large
+    },
+  },
+};
 export async function POST(req: Request) {
   try {
     const { pdfBase64, refCode } = await req.json();
