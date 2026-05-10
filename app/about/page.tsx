@@ -5,7 +5,11 @@ import Link from "next/link"; // Assuming Next.js for routing
 import { Code2, Palette, ShieldCheck, Zap, Globe2, Briefcase, ArrowRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
+import { 
+  Shield, Trophy, Smartphone, Layout, Sparkles, 
+  Volume2, Waves, Brain, Box, Building2, 
+  UserPlus, GraduationCap, Cpu, Landmark 
+} from "lucide-react";
 const metrics = [
   { label: "Years Experience", value: "10+" },
   { label: "Projects Deployed", value: "40+" },
@@ -15,16 +19,22 @@ const metrics = [
 
 // Added a dedicated logos array for the marquee
 const clientLogos = [
-  { name: "Cobra Group", id: 1 },
-  { name: "TrainElitePro", id: 2 },
-  { name: "VERA", id: 3 },
-  { name: "Slot", id: 4 },
-  { name: "CoreLabs", id: 5 },
-  // Duplicate for seamless loop
-  { name: "Cobra Group", id: 6 },
-  { name: "TrainElitePro", id: 7 },
-  { name: "VERA", id: 8 },
+  { name: "Cobra Group", icon: Shield },
+  { name: "TrainElitePro", icon: Trophy },
+  { name: "VERA", icon: Smartphone },
+  { name: "Slot", icon: Layout },
+  { name: "AURA", icon: Sparkles },
+  { name: "SHOUTITOUT", icon: Volume2 },
+  { name: "SNUGSTREAM", icon: Waves },
+  { name: "TRIVIAL", icon: Brain },
+  { name: "AUSBLOCK", icon: Box },
+  { name: "NCOA", icon: Building2 },
+  { name: "XRECRUITER", icon: UserPlus },
+  { name: "UNSW", icon: GraduationCap },
+  { name: "SONDA", icon: Cpu },
+  { name: "USACH", icon: Landmark },
 ];
+const displayLogos = [...clientLogos, ...clientLogos];
 
 const clients = [
   { name: "Cobra Group", role: "Digital Communications & Systems", year: "2025 - Present" },
@@ -68,26 +78,40 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* NEW: Animated Logo Marquee */}
-      <section className="py-20 border-y border-white/5 bg-black overflow-hidden">
-        <div className="mb-10 text-center">
-          <span className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600">Trusted By Innovators</span>
+    {/* NEW: Animated Logo Marquee */}
+<section className="py-20 border-y border-white/5 bg-black overflow-hidden relative">
+  <div className="mb-10 text-center">
+    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600">
+      Trusted By Innovators
+    </span>
+  </div>
+
+  {/* The Track */}
+  <div className="flex overflow-hidden">
+      <motion.div 
+      className="flex gap-20 items-center whitespace-nowrap"
+      animate={{ x: ["0%", "-50%"] }}
+      transition={{ ease: "linear", duration: 30, repeat: Infinity }}
+    >
+      {/* Render the list twice for the seamless loop */}
+      {[...clientLogos, ...clientLogos].map((logo, i) => (
+        <div key={i} className="flex items-center gap-6 grayscale opacity-30 hover:grayscale-0 hover:opacity-100 transition-all duration-500 cursor-default group">
+          <div className="w-12 h-12 bg-zinc-900 border border-white/10 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:border-blue-400 group-hover:shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all duration-500">
+            <logo.icon size={24} className="text-zinc-500 group-hover:text-white transition-colors" />
+          </div>
+          <span className="text-3xl font-black tracking-tighter text-zinc-400 uppercase group-hover:text-white transition-colors">
+            {logo.name}
+          </span>
         </div>
-        <div className="flex w-[200%] gap-12 animate-marquee whitespace-nowrap">
-          <motion.div 
-            className="flex gap-20 items-center justify-around min-w-full"
-            animate={{ x: ["0%", "-50%"] }}
-            transition={{ ease: "linear", duration: 20, repeat: Infinity }}
-          >
-            {clientLogos.map((logo, i) => (
-              <div key={i} className="flex items-center gap-3 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all cursor-default">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg shrink-0" /> {/* Placeholder for actual logo icon */}
-                <span className="text-2xl font-black tracking-tighter text-zinc-300 uppercase">{logo.name}</span>
-              </div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
+      ))}
+    </motion.div>
+  </div>
+
+  {/* Gradient Overlays to hide the "pop" at edges */}
+  <div className="absolute inset-y-0 left-0 w-40 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none" />
+  <div className="absolute inset-y-0 right-0 w-40 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none" />
+</section>
+
 
       {/* The "Why" Section */}
       <section className="py-24 bg-zinc-900/10">
@@ -146,6 +170,19 @@ function FeatureCard({ icon, color, title, desc }: any) {
       </div>
       <h3 className="text-xl font-bold">{title}</h3>
       <p className="text-zinc-500 text-sm leading-relaxed">{desc}</p>
+    </div>
+  );
+}
+// Helper component for cleaner code
+function LogoItem({ name }: { name: string }) {
+  return (
+    <div className="flex items-center gap-4 grayscale opacity-30 hover:grayscale-0 hover:opacity-100 transition-all duration-500 cursor-default group">
+      <div className="w-10 h-10 bg-blue-600/20 border border-blue-500/20 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:border-blue-400 transition-all">
+         <div className="w-2 h-2 bg-blue-500 rounded-full" />
+      </div>
+      <span className="text-3xl font-black tracking-tighter text-zinc-400 uppercase group-hover:text-white transition-colors">
+        {name}
+      </span>
     </div>
   );
 }

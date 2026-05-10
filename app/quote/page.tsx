@@ -10,8 +10,7 @@ import {
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 // Import the service you created in the previous step
-import { generateWiredNomadPDF } from "./pdf-service"; 
-
+import { generateWiredNomadPDF } from "./pdf-service";  
 const pricingData = {
   platforms: {
     website: { price: 1500, days: 10, perPagePrice: 250, perPageDays: 2 },
@@ -58,23 +57,57 @@ export default function AdvancedQuotePage() {
   const [paymentPlan, setPaymentPlan] = useState("milestones");
   const [totalPrice, setTotalPrice] = useState(0);
   const [totalDays, setTotalDays] = useState(0);
+const [errors, setErrors] = useState<string[]>([]);
 
   // New handler calling the external service
-  const handleDownload = () => {
-    generateWiredNomadPDF({
-      totalPrice,
-      totalDays,
-      platform,
-      webPages,
-      selectedAppFeatures,
-      selectedFeatures,
-      selectedDomain,
-      selectedHosting,
-      maintenanceMonths,
-      paymentPlan,
-      pricingData
-    });
-  };
+// 1. New State for Client Info
+const [clientData, setClientData] = useState({
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  companyName: "",
+  abn: ""
+});
+
+// 2. Updated handleDownload with Validation
+const handleDownload = () => {
+  const newErrors: string[] = [];
+
+  // Platform Validation
+  if (!platform.web && !platform.app) newErrors.push("platform");
+
+  // Client Data Validation (Required fields)
+  if (!clientData.firstName) newErrors.push("firstName");
+  if (!clientData.lastName) newErrors.push("lastName");
+  if (!clientData.email.includes("@")) newErrors.push("email");
+  if (!clientData.phone) newErrors.push("phone");
+
+  if (newErrors.length > 0) {
+    setErrors(newErrors);
+    const firstError = document.getElementById(newErrors[0]);
+    firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  setErrors([]);
+
+  // Pass clientData to the PDF generator
+  generateWiredNomadPDF({
+    totalPrice,
+    totalDays,
+    platform,
+    webPages,
+    selectedAppFeatures,
+    selectedFeatures,
+    selectedDomain,
+    selectedHosting,
+    maintenanceMonths,
+    paymentPlan,
+    pricingData,
+    client: clientData // <--- New field
+  });
+};
 
   useEffect(() => {
     let price = 0;
@@ -116,7 +149,7 @@ export default function AdvancedQuotePage() {
       case "fortnightly":
         price *= 1.00; // Baseline (Standard)
         break;
-      case "milestone":
+      case "milestones":
         price *= 1.05; // 5% Surcharge
         break;
       case "monthly":
@@ -154,13 +187,30 @@ export default function AdvancedQuotePage() {
             <div className="grid sm:grid-cols-2 gap-4 mb-8">
               <PlatformBox 
                 active={platform.web} 
-                onClick={() => setPlatform(prev => ({...prev, web: !prev.web}))}
-                icon={<Globe />} label="Web Application" price={pricingData.platforms.website.price}
+                onClick={() => {
+                  // Only allow toggle if the OTHER platform is active
+                  if (!platform.web || platform.app) {
+                    setPlatform(prev => ({...prev, web: !prev.web}));
+                    setErrors(prev => prev.filter(e => e !== "platform"));
+                  }
+                }}
+                icon={<Globe />} 
+                label="Web Application" 
+                price={pricingData.platforms.website.price}
               />
+              
               <PlatformBox 
                 active={platform.app} 
-                onClick={() => setPlatform(prev => ({...prev, app: !prev.app}))}
-                icon={<Smartphone />} label="iOS & Android App" price={pricingData.platforms.mobileApp.price}
+                onClick={() => {
+                  // Only allow toggle if the OTHER platform is active
+                  if (!platform.app || platform.web) {
+                    setPlatform(prev => ({...prev, app: !prev.app}));
+                    setErrors(prev => prev.filter(e => e !== "platform"));
+                  }
+                }}
+                icon={<Smartphone />} 
+                label="iOS & Android App" 
+                price={pricingData.platforms.mobileApp.price}
               />
             </div>
 
@@ -244,66 +294,155 @@ export default function AdvancedQuotePage() {
             </div>
           </section>
 
+          
           <section className="grid sm:grid-cols-2 gap-8">
+            {/* 04. Maintenance */}
             <div>
               <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">04. Maintenance</h2>
-              <select value={maintenanceMonths} onChange={(e) => setMaintenanceMonths(Number(e.target.value))} className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-xl focus:border-blue-500 outline-none">
+              <select 
+                value={maintenanceMonths} 
+                onChange={(e) => setMaintenanceMonths(Number(e.target.value))} 
+                className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-xl focus:border-blue-500 outline-none"
+              >
                 <option value={3}>3 Months Priority Support</option>
                 <option value={6}>6 Months Priority Support</option>
                 <option value={12}>1 Year Managed Support</option>
               </select>
             </div>
-           <div className="mb-10">
-            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">05. Strategy</h2>
-            <div className="grid grid-cols-3 gap-3">
-              {/* Row 1: High Incentive / Standard */}
-              <PaymentOption 
-                current={paymentPlan} 
-                set={setPaymentPlan} 
-                id="50-50" 
-                title="50/50" 
-                desc="10% OFF" 
-              />
-              <PaymentOption 
-                current={paymentPlan} 
-                set={setPaymentPlan} 
-                id="weekly" 
-                title="Weekly" 
-                desc="5% OFF" 
-              />
-              <PaymentOption 
-                current={paymentPlan} 
-                set={setPaymentPlan} 
-                id="fortnightly" 
-                title="Fortnightly" 
-                desc="STD" 
-              />
 
-              {/* Row 2: Management Surcharges */}
-              <PaymentOption 
-                current={paymentPlan} 
-                set={setPaymentPlan} 
-                id="milestone" 
-                title="Milestones" 
-                desc="+5%" 
-              />
-              <PaymentOption 
-                current={paymentPlan} 
-                set={setPaymentPlan} 
-                id="monthly" 
-                title="Monthly" 
-                desc="+8%" 
-              />
-              <PaymentOption 
-                current={paymentPlan} 
-                set={setPaymentPlan} 
-                id="daily" 
-                title="Daily" 
-                desc="+15%" 
-              />
+            {/* 05. Strategy */}
+            <div id="strategy-section" className="mb-10">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 font-mono">05. Payment plan</h2> 
+                {!paymentPlan && <span className="text-red-500 text-[10px] font-bold uppercase">Selection Required</span>}
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {/* Row 1: High Incentive / Standard */}
+                <PaymentOption 
+                  current={paymentPlan} 
+                  set={setPaymentPlan} 
+                  id="50-50" 
+                  title="50/50" 
+                  desc="10% OFF" 
+                />
+                <PaymentOption 
+                  current={paymentPlan} 
+                  set={setPaymentPlan} 
+                  id="weekly" 
+                  title="Weekly" 
+                  desc="5% OFF" 
+                />
+                <PaymentOption 
+                  current={paymentPlan} 
+                  set={setPaymentPlan} 
+                  id="fortnightly" 
+                  title="Fortnightly" 
+                  desc="STD" 
+                />
+
+                {/* Row 2: Management Surcharges */}
+                <PaymentOption 
+                  current={paymentPlan} 
+                  set={setPaymentPlan} 
+                  id="milestones" 
+                  title="Milestones" 
+                  desc="+5%" 
+                />
+                <PaymentOption 
+                  current={paymentPlan} 
+                  set={setPaymentPlan} 
+                  id="monthly" 
+                  title="Monthly" 
+                  desc="+8%" 
+                />
+                <PaymentOption 
+                  current={paymentPlan} 
+                  set={setPaymentPlan} 
+                  id="daily" 
+                  title="Daily" 
+                  desc="+15%" 
+                />
+              </div>
             </div>
-          </div>
           </section>
+            <section id="client-info-section">
+              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">06. Client Identification</h2>
+              
+              <div className="grid sm:grid-cols-2 gap-6 bg-zinc-900/30 p-8 rounded-[2.5rem] border border-zinc-800">
+                {/* First Name */}
+                <div id="firstName" className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">First Name *</label>
+                  <input 
+                    type="text" 
+                    value={clientData.firstName}
+                    onChange={(e) => setClientData({...clientData, firstName: e.target.value})}
+                    className={`w-full bg-zinc-950 border ${errors.includes("firstName") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
+                    placeholder="John"
+                  />
+                </div>
+
+                {/* Last Name */}
+                <div id="lastName" className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Last Name *</label>
+                  <input 
+                    type="text" 
+                    value={clientData.lastName}
+                    onChange={(e) => setClientData({...clientData, lastName: e.target.value})}
+                    className={`w-full bg-zinc-950 border ${errors.includes("lastName") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
+                    placeholder="Doe"
+                  />
+                </div>
+
+                {/* Email */}
+                <div id="email" className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Email Address *</label>
+                  <input 
+                    type="email" 
+                    value={clientData.email}
+                    onChange={(e) => setClientData({...clientData, email: e.target.value})}
+                    className={`w-full bg-zinc-950 border ${errors.includes("email") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
+                    placeholder="john@company.com"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div id="phone" className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Phone Number *</label>
+                  <input 
+                    type="tel" 
+                    value={clientData.phone}
+                    onChange={(e) => setClientData({...clientData, phone: e.target.value})}
+                    className={`w-full bg-zinc-950 border ${errors.includes("phone") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
+                    placeholder="+61 400 000 000"
+                  />
+                </div>
+
+                {/* Company Name (Optional) */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Company Name</label>
+                  <input 
+                    type="text" 
+                    value={clientData.companyName}
+                    onChange={(e) => setClientData({...clientData, companyName: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl focus:border-blue-500 outline-none transition-all"
+                    placeholder="Optional"
+                  />
+                </div>
+
+                {/* ABN (Optional) */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">ABN (Australia)</label>
+                  <input 
+                    type="text" 
+                    value={clientData.abn}
+                    onChange={(e) => setClientData({...clientData, abn: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl focus:border-blue-500 outline-none transition-all"
+                    placeholder="XX XXX XXX XXX"
+                  />
+                </div>
+              </div>
+            </section>
         </div>
 
         <div className="lg:col-span-1 ">
@@ -323,12 +462,11 @@ export default function AdvancedQuotePage() {
               <span className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Investment Total</span>
               <div className="text-6xl font-black mt-2 tracking-tighter">${totalPrice.toLocaleString()}</div>
             </div>
-
             <button 
               onClick={handleDownload} 
-              className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-lg shadow-blue-500/20 transition-all"
+              className={`w-full h-16 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all ${errors.length > 0 ? 'bg-red-600/80' : 'bg-blue-600 hover:bg-blue-500'}`}
             >
-              Generate Proposal <FileText size={20} />
+              {errors.length > 0 ? "Check Required Fields" : "Generate Proposal"} <FileText size={20} />
             </button>
           </div>
         </div>

@@ -1,10 +1,10 @@
-// utils/pdf-service.ts
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import rocketIcon from "./rocket.png";
 
 export const generateWiredNomadPDF = (data: any) => {
   const { 
+    client, // Destructuring the new client data
     totalPrice: basePrice,
     totalDays, 
     platform, 
@@ -41,11 +41,8 @@ export const generateWiredNomadPDF = (data: any) => {
   // --- 2. BRANDING HEADER ---
   doc.setFillColor(37, 99, 235); 
   doc.rect(0, 0, 210, 40, 'F');
-
-// Add the Rocket (x, y, width, height)
-// Positioned to the right of the "WiredNomad" text 
-doc.addImage(rocketIcon.src, 'PNG', 180, 8, 20, 20);
- 
+  doc.addImage(rocketIcon.src, 'PNG', 180, 8, 20, 20);
+  
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
@@ -53,19 +50,29 @@ doc.addImage(rocketIcon.src, 'PNG', 180, 8, 20, 20);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text("Digital Systems & Software Engineering | NSW, Australia", 14, 30);
-  doc.text(`Agreement Version: 5.8 | Ref: ${refCode}`, 14, 35);
+  doc.text(`ABN: 15758394906 | Agreement Version: 5.8 | Ref: ${refCode}`, 14, 35);
 
-  // --- 3. LEGAL CONTENT WITH FORMATTING ---
+  // --- 2b. CLIENT INFO (NEW SECTION) ---
   doc.setTextColor(40, 40, 40);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("CLIENT / CONTRACTING PARTY:", 14, 50);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${client.firstName} ${client.lastName}`, 14, 55);
+  doc.text(`${client.email} | ${client.phone}`, 14, 60);
+  if (client.companyName) {
+    doc.text(`${client.companyName} ${client.abn ? `(ABN: ${client.abn})` : ''}`, 14, 65);
+  }
+
+  // --- 3. LEGAL CONTENT ---
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text("DIGITAL SERVICES AGREEMENT", 14, 52);
+  doc.text("DIGITAL SERVICES AGREEMENT", 14, 75);
   
-  doc.setFontSize(7.5);
+  doc.setFontSize(10);
   
-  // Use "###" as a marker for headings we want to be Bold/Large
   const fullLegalText = `DIGITAL SERVICES AGREEMENT (V5.8)
-BETWEEN: WiredNomad, hereafter referred to as "WN", and the entity or individual subscribing to the services, hereafter referred to as "The Client."
+BETWEEN: WiredNomad, hereafter referred to as "WN", and ${client.firstName} ${client.lastName} ${client.companyName ? `of ${client.companyName}` : ''}, hereafter referred to as "The Client."
 
 ### INTRODUCTION
 This Agreement governs the terms and conditions under which WN will provide the digital services described herein. This contract supersedes any prior written or verbal agreements, even if they contain conflicting terms. The validity of this contract commences on the date the Client begins using the "Client Panel," or when the initial payment is received and validated by WN. By proceeding, the Client automatically agrees to these terms.
@@ -127,25 +134,23 @@ The Client explicitly consents to the jurisdiction of the laws and courts of New
 ### ACCEPTANCE
 By proceeding with the initial payment, I hereby accept the terms and conditions stipulated in this Agreement, creating a binding commercial relationship with WiredNomad.`;
 
-  let currentY = 58;
+  let currentY = 82;
   const lines = doc.splitTextToSize(fullLegalText, 182);
 
   lines.forEach((line: string) => {
     currentY = checkPage(currentY);
-    
-    // Check if the line is a header (starts with ###)
     if (line.startsWith('###')) {
       doc.setFont("helvetica", "bold");
       doc.text(line.replace('### ', ''), 14, currentY);
-      currentY += 5; // Extra space after header
+      currentY += 5;
     } else {
       doc.setFont("helvetica", "normal");
       doc.text(line, 14, currentY);
-      currentY += 4; // Standard line height
+      currentY += 4;
     }
   });
 
-  // --- 4. ITEMISED INVESTMENT TABLE ---  
+  // --- 4. ITEMISED INVESTMENT TABLE ---   
   doc.addPage(); 
   doc.setTextColor(40, 40, 40);
   doc.setFont("helvetica", "bold");
@@ -190,19 +195,40 @@ By proceeding with the initial payment, I hereby accept the terms and conditions
   doc.text("EXECUTION & PAYMENT ROADMAP", 14, 20);
 
   const roadmapRows: any[][] = [];
-  // (Roadmap logic remains the same...)
   if (paymentPlan === "50-50") {
     roadmapRows.push([formatDate(0), "Commencement Deposit", `$${(finalPrice / 2).toFixed(2)}`]);
     roadmapRows.push([formatDate(totalDays), "Project Handover", `$${(finalPrice / 2).toFixed(2)}`]);
-  } else if (paymentPlan === "milestone") {
+  } 
+  else if (paymentPlan === "milestones") { 
+    const milestoneNames = [
+      "Project Initiation & Discovery",
+      "UI/UX Architecture & Sign-off",
+      "Backend Infrastructure Core",
+      "Frontend Development Phase",
+      "Alpha System Integration",
+      "API & Third-Party Connectivity",
+      "Feature Refinement & Polish",
+      "Beta Testing & Quality Assurance",
+      "Security Audit & Optimisation",
+      "Final Handover & Deployment"
+    ];
+
     const totalMilestones = 10;
     const milestoneAmount = finalPrice / totalMilestones;
     const interval = totalDays / (totalMilestones - 1); 
-    const milestoneNames = ["Initiation", "UI/UX Sign-off", "Backend Core", "Frontend Dev", "Alpha Integration", "API Connectivity", "Refinement", "Beta Testing", "Security Audit", "Handover"];
+
     for (let i = 0; i < totalMilestones; i++) {
-      roadmapRows.push([formatDate(Math.round(i * interval)), `Milestone ${i+1}: ${milestoneNames[i]}`, `$${milestoneAmount.toFixed(2)}`]);
+      const scheduledDate = formatDate(Math.round(i * interval));
+      const phaseName = milestoneNames[i]; // Correctly pulling from the array above
+      
+      roadmapRows.push([
+        scheduledDate, 
+        `Milestone ${i + 1}: ${phaseName}`, 
+        `$${milestoneAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`
+      ]);
     }
-  } else {
+  }
+  else {
     let daysBetween = (paymentPlan === "daily") ? 1 : (paymentPlan === "fortnightly") ? 14 : (paymentPlan === "monthly") ? 30 : 7;
     const iterations = Math.ceil(totalDays / daysBetween);
     const installmentAmount = finalPrice / iterations;
@@ -221,27 +247,29 @@ By proceeding with the initial payment, I hereby accept the terms and conditions
     headStyles: { fillColor: [30, 30, 30] },
   });
 
-  // --- 6. SIGN OFF ---
+  // --- 6. SIGN OFF & SAVE ---
   let signY = (doc as any).lastAutoTable?.finalY + 30;
   if (signY > 260) { doc.addPage(); signY = 30; }
   doc.setFontSize(8);
   doc.setFont("helvetica", "italic");
   doc.text(`WiredNomad Engineering | Ref: ${refCode}`, 14, signY);
-  doc.save(`WiredNomad_Agreement_${refCode}.pdf`);
-  // --- 7. TRIGGER EMAIL NOTIFICATION ---
-  const pdfBase64 = doc.output('datauristring').split(',')[1]; // Get raw base64 data
+
+  // TRIGGER EMAIL NOTIFICATION (Using the absolute API path)
+  const pdfBase64 = doc.output('datauristring').split(',')[1];
   fetch('/api/send-agreement', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       pdfBase64,
-      refCode
+      refCode,
+      clientName: `${client.firstName} ${client.lastName}`,
+      clientEmail: client.email
     }),
   }).then(res => {
-  if (!res.ok) console.error("Server responded with error:", res.statusText);
-  else console.log("Email trigger successful");
-}).catch(err => console.error("Email notification failed:", err));
+    if (!res.ok) console.error("Server responded with error:", res.statusText);
+    else console.log("Email trigger successful");
+  }).catch(err => console.error("Email notification failed:", err));
 
-  // --- 8. SAVE FOR USER ---
+  // FINAL SAVE FOR USER
   doc.save(`WiredNomad_Agreement_${refCode}.pdf`);
 };

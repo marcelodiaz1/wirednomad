@@ -10,11 +10,41 @@ import Navbar from "@/components/Navbar";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false); // Add this
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
-  };
+    setLoading(true);
+
+    // 1. Gather the data from the form
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name"),
+      email: formData.get("email"),
+      projectType: formData.get("projectType"),
+      message: formData.get("message"),
+    };
+
+    try {
+      // 2. Send it to your API
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        console.error("API error:", res.statusText);
+        alert("Transmission failed. Please check your API key and terminal.");
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }; 
 
   return (
     <div className="bg-[#050505] text-white min-h-screen font-sans selection:bg-blue-500/30">
@@ -86,17 +116,17 @@ export default function ContactPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Full Name</label>
-                    <input required type="text" placeholder="John Doe" className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700" />
+                    <input required name="name" type="text" placeholder="John Doe" className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Email Address</label>
-                    <input required type="email" placeholder="john@example.com" className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700" />
+                    <input name="email" required type="email" placeholder="john@example.com" className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Project Type</label>
-                  <select className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all text-zinc-400">
+                  <select name="projectType" className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all text-zinc-400">
                     <option>Web Application Engineering</option>
                     <option>Mobile App Development (iOS/Android)</option>
                     <option>UI/UX Design System</option>
@@ -107,11 +137,11 @@ export default function ContactPage() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Message</label>
-                  <textarea rows={5} placeholder="Tell me about your vision..." className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700 resize-none"></textarea>
+                  <textarea name="message" rows={5} placeholder="Tell me about your vision..." className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700 resize-none"></textarea>
                 </div>
 
-                <button type="submit" className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-sm flex items-center justify-center gap-3 transition-all group shadow-xl shadow-blue-500/20">
-                  Transmit Message <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                <button disabled={loading} type="submit" className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-sm flex items-center justify-center gap-3 transition-all group shadow-xl shadow-blue-500/20">
+                  {loading ? "Transmitting..." : "Transmit Message"}  <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 </button>
               </motion.form>
             ) : (

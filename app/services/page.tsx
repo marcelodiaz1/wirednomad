@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import Link from "next/link";
 // Import your actual components here
 // import Navbar from "./components/Navbar";
 // import Footer from "./components/Footer";
@@ -114,19 +115,32 @@ export default function ServicesPage() {
           </div>
         </div>
       </section>
-
       {/* CTA Section */}
-      <section className="py-32 px-6">
-        <div className="max-w-5xl mx-auto bg-blue-600 rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-8">Ready to start your <br/>next project?</h2>
-            <button className="bg-white text-blue-600 px-10 py-5 rounded-full font-black uppercase tracking-widest hover:scale-105 transition-transform">
-              Get a quote
-            </button>
-          </div>
-          {/* Abstract background shape */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+      <section className="py-32 border-y border-white/5 bg-zinc-900/20 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 relative z-10 text-center"> 
+          {/* ^ This div centers everything and adds side padding */}
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-5xl md:text-8xl font-black tracking-tighter mb-12 italic uppercase">
+              Ready to start your <br />
+              <span className="text-blue-600">next project?</span>
+            </h2>
+            
+            <Link 
+              href="/quote" 
+              className="inline-block bg-white text-black px-12 py-6 rounded-full font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-600 hover:text-white hover:scale-105 transition-all duration-300 shadow-2xl shadow-white/5"
+            >
+              Get a quote 
+            </Link>
+          </motion.div>
         </div>
+
+        {/* Optional: Subtle ambient glow to make it "pop" */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-blue-600/5 blur-[120px] pointer-events-none"></div>
       </section>
         <Footer/>
     </div>
