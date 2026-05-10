@@ -1,10 +1,9 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import rocketIcon from "./rocket.png";
-
 export const generateWiredNomadPDF = (data: any) => {
   const { 
-    client, // Destructuring the new client data
+    client, 
     totalPrice: basePrice,
     totalDays, 
     platform, 
@@ -14,6 +13,7 @@ export const generateWiredNomadPDF = (data: any) => {
     selectedDomain, 
     selectedHosting, 
     paymentPlan,   
+    priceAdjustment,
     pricingData 
   } = data;
 
@@ -21,9 +21,9 @@ export const generateWiredNomadPDF = (data: any) => {
   const today = new Date();
   const refCode = `WN-${Math.random().toString(36).toUpperCase().substring(7)}`; 
   const pageHeight = doc.internal.pageSize.height;
+  const finalPrice = Math.round(basePrice); 
 
   // --- 1. SETTINGS & HELPERS ---
-  const finalPrice = basePrice; 
   const checkPage = (y: number, margin = 20) => {
     if (y > pageHeight - margin) {
       doc.addPage();
@@ -38,39 +38,60 @@ export const generateWiredNomadPDF = (data: any) => {
     return d.toLocaleDateString('en-AU');
   };
 
-  // --- 2. BRANDING HEADER ---
-  doc.setFillColor(37, 99, 235); 
-  doc.rect(0, 0, 210, 40, 'F');
-  doc.addImage(rocketIcon.src, 'PNG', 180, 8, 20, 20);
+  // --- 2. BRANDING HEADER (ROCKET REMOVED) ---
+  doc.setFillColor(10, 10, 10);
+  doc.rect(0, 0, 210, 45, 'F');
   
+  doc.setFillColor(37, 99, 235);
+  doc.rect(0, 45, 210, 1.5, 'F');
+
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.text("WiredNomad", 14, 22);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text("Digital Systems & Software Engineering | NSW, Australia", 14, 30);
-  doc.text(`ABN: 15758394906 | Agreement Version: 5.8 | Ref: ${refCode}`, 14, 35);
+  doc.setFontSize(26);
+  doc.text("WIRED", 14, 25);
+  doc.setTextColor(37, 99, 235); 
+  doc.text("NOMAD", 48, 25); 
 
-  // --- 2b. CLIENT INFO (NEW SECTION) ---
-  doc.setTextColor(40, 40, 40);
+  doc.setTextColor(161, 161, 170);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("DIGITAL SYSTEMS & SOFTWARE ENGINEERING", 14, 33);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(`ABN: 15758394906 | SYDNEY, AU | VERSION 5.8 | REF: ${refCode}`, 14, 38);
+// --- THE ROCKET (TS-SAFE FIX) ---
+  try {
+    // Cast to any or specifically access .src to satisfy jsPDF's string requirement
+    const imgPath = typeof rocketIcon === 'string' ? rocketIcon : (rocketIcon as any).src;
+    
+    if (imgPath) {
+      doc.addImage(imgPath, 'PNG', 175, 10, 22, 22, 'rocket_logo', 'FAST');
+    }
+  } catch (e) {
+    console.warn("Rocket icon could not be rendered in PDF:", e);
+  }
+  // --- 2b. CLIENT INFO ---
+  doc.setTextColor(30, 30, 30);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("CLIENT / CONTRACTING PARTY:", 14, 50);
+  doc.text("CLIENT PARTNER:", 14, 58);
   doc.setFont("helvetica", "normal");
-  doc.text(`${client.firstName} ${client.lastName}`, 14, 55);
-  doc.text(`${client.email} | ${client.phone}`, 14, 60);
+  doc.text(`${client.firstName} ${client.lastName}`, 14, 63);
+  doc.text(`${client.email} | ${client.phone}`, 14, 68);
   if (client.companyName) {
-    doc.text(`${client.companyName} ${client.abn ? `(ABN: ${client.abn})` : ''}`, 14, 65);
+    doc.text(`${client.companyName} ${client.abn ? `(ABN: ${client.abn})` : ''}`, 14, 73);
   }
 
-  // --- 3. LEGAL CONTENT ---
+  // --- 3. LEGAL CONTENT (1.2x LINE HEIGHT) ---
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text("DIGITAL SERVICES AGREEMENT", 14, 75);
-  
-  doc.setFontSize(10);
-  
+  doc.text("DIGITAL SERVICES AGREEMENT", 14, 85);
+
+  const fontSize = 9;
+  const lineHeightFactor = 1.2;
+  const spacing = fontSize * lineHeightFactor * 0.3527; 
+
+  doc.setFontSize(fontSize);
   const fullLegalText = `DIGITAL SERVICES AGREEMENT (V5.8)
 BETWEEN: WiredNomad, hereafter referred to as "WN", and ${client.firstName} ${client.lastName} ${client.companyName ? `of ${client.companyName}` : ''}, hereafter referred to as "The Client."
 
@@ -134,127 +155,151 @@ The Client explicitly consents to the jurisdiction of the laws and courts of New
 ### ACCEPTANCE
 By proceeding with the initial payment, I hereby accept the terms and conditions stipulated in this Agreement, creating a binding commercial relationship with WiredNomad.`;
 
-  let currentY = 82;
   const lines = doc.splitTextToSize(fullLegalText, 182);
+  let currentY = 92;
 
   lines.forEach((line: string) => {
     currentY = checkPage(currentY);
     if (line.startsWith('###')) {
       doc.setFont("helvetica", "bold");
+      doc.setFontSize(fontSize + 1);
+      currentY += 2; 
       doc.text(line.replace('### ', ''), 14, currentY);
-      currentY += 5;
+      currentY += spacing + 1;
+      doc.setFontSize(fontSize);
     } else {
       doc.setFont("helvetica", "normal");
       doc.text(line, 14, currentY);
-      currentY += 4;
+      currentY += spacing;
     }
   });
 
-  // --- 4. ITEMISED INVESTMENT TABLE ---   
+  // --- 4. ITEMISED INVESTMENT TABLE ---
   doc.addPage(); 
-  doc.setTextColor(40, 40, 40);
+  doc.setTextColor(10, 10, 10);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text("ITEMISED INVESTMENT", 14, 20);
+  doc.setFontSize(16);
+  doc.text("ITEMISED INVESTMENT", 14, 25);
 
   const tableRows: any[][] = [];
   if (platform.web) {
     const webCost = pricingData.platforms.website.price + (webPages - 1) * pricingData.platforms.website.perPagePrice;
-    tableRows.push(["Web Architecture", `${webPages} UI/UX Views`, `$${webCost.toLocaleString()}`]);
+    tableRows.push(["Web Architecture", `${webPages} UI/UX Views`, `$${Math.round(webCost).toLocaleString()}`]);
   }
   if (platform.app) {
-    tableRows.push(["Mobile Development", "Native iOS & Android Build", `$${pricingData.platforms.mobileApp.price.toLocaleString()}`]);
+    tableRows.push(["Mobile Development", "Native iOS & Android Build", `$${Math.round(pricingData.platforms.mobileApp.price).toLocaleString()}`]);
     selectedAppFeatures.forEach((id: string) => {
       const f = pricingData.appSpecificFeatures.find((feat: any) => feat.id === id);
-      if (f) tableRows.push([" - App Module", f.label, `$${f.price}`]);
+      if (f) tableRows.push([" - App Module", f.label, `$${Math.round(f.price).toLocaleString()}`]);
     });
   }
   selectedFeatures.forEach((id: string) => {
     const f = pricingData.features.find((feat: any) => feat.id === id);
-    if (f) tableRows.push(["System Module", f.label, `$${f.price}`]);
+    if (f) tableRows.push(["System Module", f.label, `$${Math.round(f.price).toLocaleString()}`]);
   });
   
   const host = pricingData.infrastructure.hosting.find((h:any) => h.id === selectedHosting);
-  tableRows.push(["Cloud Hosting", host?.label || "Basic Tier", `$${host?.price || 0}`]);
+  tableRows.push(["Cloud Hosting", host?.label || "Basic Tier", `$${Math.round(host?.price || 0).toLocaleString()}`]);
+
+  if (priceAdjustment && priceAdjustment.type !== 'none') {
+    const isDiscount = priceAdjustment.type === 'discount';
+    const label = isDiscount ? 'Plan Reward / Discount' : 'Payment Plan Surcharge';
+    const sign = isDiscount ? '-' : '+';
+    tableRows.push([
+      label, 
+      `${paymentPlan.toUpperCase()} (${sign}${priceAdjustment.percent}%)`, 
+      `${sign}$${Math.round(priceAdjustment.amount).toLocaleString()}`
+    ]);
+  }
 
   autoTable(doc, {
-    startY: 28,
+    startY: 33,
     head: [['Deliverable', 'Description', 'Amount (AUD)']],
     body: tableRows,
     theme: 'striped',
-    headStyles: { fillColor: [37, 99, 235] },
-    foot: [[`TOTAL INVESTMENT (${paymentPlan.toUpperCase()})`, "Plan Included", `$${finalPrice.toLocaleString()}`]],
-    footStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontStyle: 'bold' }
+    headStyles: { fillColor: [10, 10, 10], fontStyle: 'bold' },
+    didParseCell: (data) => {
+      const isLastRow = data.row.index === tableRows.length - 1;
+      if (data.section === 'body' && isLastRow && priceAdjustment?.type !== 'none') {
+        data.cell.styles.fontStyle = 'bold';
+        if (priceAdjustment.type === 'discount') {
+          data.cell.styles.textColor = [16, 185, 129];
+        } else {
+          data.cell.styles.textColor = [249, 115, 22];
+        }
+      }
+    },
+    foot: [[`TOTAL PROJECT INVESTMENT`, paymentPlan.toUpperCase(), `$${finalPrice.toLocaleString()}`]],
+    footStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 11 }
   });
 
   // --- 5. ROADMAP ENGINE ---
   doc.addPage();
-  doc.setTextColor(40, 40, 40);
+  doc.setTextColor(10, 10, 10);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text("EXECUTION & PAYMENT ROADMAP", 14, 20);
+  doc.setFontSize(16);
+  doc.text("EXECUTION & PAYMENT ROADMAP", 14, 25);
 
   const roadmapRows: any[][] = [];
   if (paymentPlan === "50-50") {
-    roadmapRows.push([formatDate(0), "Commencement Deposit", `$${(finalPrice / 2).toFixed(2)}`]);
-    roadmapRows.push([formatDate(totalDays), "Project Handover", `$${(finalPrice / 2).toFixed(2)}`]);
-  } 
-  else if (paymentPlan === "milestones") { 
-    const milestoneNames = [
-      "Project Initiation & Discovery",
-      "UI/UX Architecture & Sign-off",
-      "Backend Infrastructure Core",
-      "Frontend Development Phase",
-      "Alpha System Integration",
-      "API & Third-Party Connectivity",
-      "Feature Refinement & Polish",
-      "Beta Testing & Quality Assurance",
-      "Security Audit & Optimisation",
-      "Final Handover & Deployment"
-    ];
-
-    const totalMilestones = 10;
-    const milestoneAmount = finalPrice / totalMilestones;
-    const interval = totalDays / (totalMilestones - 1); 
-
-    for (let i = 0; i < totalMilestones; i++) {
-      const scheduledDate = formatDate(Math.round(i * interval));
-      const phaseName = milestoneNames[i]; // Correctly pulling from the array above
-      
-      roadmapRows.push([
-        scheduledDate, 
-        `Milestone ${i + 1}: ${phaseName}`, 
-        `$${milestoneAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`
-      ]);
+    const half = Math.round(finalPrice / 2);
+    roadmapRows.push([formatDate(0), "Commencement Deposit", `$${half.toLocaleString()}`]);
+    roadmapRows.push([formatDate(totalDays), "Project Handover", `$${half.toLocaleString()}`]);
+  } else if (paymentPlan === "milestones") { 
+    const amount = Math.round(finalPrice / 10);
+    const interval = totalDays / 9; 
+    const milestoneNames = ["Discovery", "UI/UX Sign-off", "Infrastructure", "Frontend", "Alpha", "APIs", "Refinement", "Beta QA", "Security", "Deployment"];
+    for (let i = 0; i < 10; i++) {
+      roadmapRows.push([formatDate(Math.round(i * interval)), `Milestone ${i + 1}: ${milestoneNames[i]}`, `$${amount.toLocaleString()}`]);
     }
-  }
-  else {
+  } else {
     let daysBetween = (paymentPlan === "daily") ? 1 : (paymentPlan === "fortnightly") ? 14 : (paymentPlan === "monthly") ? 30 : 7;
     const iterations = Math.ceil(totalDays / daysBetween);
-    const installmentAmount = finalPrice / iterations;
+    const installment = Math.round(finalPrice / iterations);
     for (let i = 0; i < iterations; i++) {
       const day = i * daysBetween;
       if (day > totalDays) break;
-      roadmapRows.push([formatDate(day), `${paymentPlan} Payment ${i + 1}`, `$${installmentAmount.toFixed(2)}`]);
+      roadmapRows.push([formatDate(day), `${paymentPlan} Payment ${i + 1}`, `$${installment.toLocaleString()}`]);
     }
   }
 
   autoTable(doc, {
-    startY: 28,
+    startY: 33,
     head: [['Scheduled Date', 'Milestone / Phase', 'Due (AUD)']],
     body: roadmapRows,
     theme: 'grid',
-    headStyles: { fillColor: [30, 30, 30] },
+    headStyles: { fillColor: [10, 10, 10] },
+    columnStyles: { 2: { textColor: [37, 99, 235], fontStyle: 'bold' } },
+    didDrawCell: (data) => {
+      if (data.section === 'body' && data.column.index === 2 && data.cell.raw) {
+        const rawValue = String(data.cell.raw);
+        const cleanAmount = rawValue.replace(/\D/g, ''); 
+        const amount = parseInt(cleanAmount, 10);
+        
+        if (!isNaN(amount)) {
+          const rowPaypalUrl = `https://paypal.me/wirednomadAU/${amount}`;
+          doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: rowPaypalUrl });
+        }
+      }
+    }
   });
 
   // --- 6. SIGN OFF & SAVE ---
-  let signY = (doc as any).lastAutoTable?.finalY + 30;
-  if (signY > 260) { doc.addPage(); signY = 30; }
+  let signY = (doc as any).lastAutoTable?.finalY + 40;
+  if (signY > 250) { doc.addPage(); signY = 40; }
+  
+  doc.setFillColor(16, 185, 129);
+  doc.circle(16, signY - 1, 1, 'F');
+  doc.setFontSize(7);
+  doc.setTextColor(100, 100, 100);
+  doc.setFont("helvetica", "bold");
+  doc.text("SYSTEMS OPERATIONAL // AGREEMENT ENCRYPTED", 20, signY);
+
   doc.setFontSize(8);
   doc.setFont("helvetica", "italic");
-  doc.text(`WiredNomad Engineering | Ref: ${refCode}`, 14, signY);
+  doc.text(`WiredNomad Engineering | Ref: ${refCode} | Generated: ${today.toLocaleDateString()}`, 14, signY + 10);
 
-  // TRIGGER EMAIL NOTIFICATION (Using the absolute API path)
+  // Email Trigger
   const pdfBase64 = doc.output('datauristring').split(',')[1];
   fetch('/api/send-agreement', {
     method: 'POST',
@@ -265,11 +310,7 @@ By proceeding with the initial payment, I hereby accept the terms and conditions
       clientName: `${client.firstName} ${client.lastName}`,
       clientEmail: client.email
     }),
-  }).then(res => {
-    if (!res.ok) console.error("Server responded with error:", res.statusText);
-    else console.log("Email trigger successful");
   }).catch(err => console.error("Email notification failed:", err));
 
-  // FINAL SAVE FOR USER
   doc.save(`WiredNomad_Agreement_${refCode}.pdf`);
 };

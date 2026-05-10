@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-// Import the service you created in the previous step
 import { generateWiredNomadPDF } from "./pdf-service";  
+
 const pricingData = {
   platforms: {
     website: { price: 1500, days: 10, perPagePrice: 250, perPageDays: 2 },
@@ -57,113 +57,122 @@ export default function AdvancedQuotePage() {
   const [paymentPlan, setPaymentPlan] = useState("milestones");
   const [totalPrice, setTotalPrice] = useState(0);
   const [totalDays, setTotalDays] = useState(0);
-const [errors, setErrors] = useState<string[]>([]);
-
-  // New handler calling the external service
-// 1. New State for Client Info
-const [clientData, setClientData] = useState({
-  firstName: "",
-  lastName: "",
-  email: "",
-  phone: "",
-  companyName: "",
-  abn: ""
-});
-
-// 2. Updated handleDownload with Validation
-const handleDownload = () => {
-  const newErrors: string[] = [];
-
-  // Platform Validation
-  if (!platform.web && !platform.app) newErrors.push("platform");
-
-  // Client Data Validation (Required fields)
-  if (!clientData.firstName) newErrors.push("firstName");
-  if (!clientData.lastName) newErrors.push("lastName");
-  if (!clientData.email.includes("@")) newErrors.push("email");
-  if (!clientData.phone) newErrors.push("phone");
-
-  if (newErrors.length > 0) {
-    setErrors(newErrors);
-    const firstError = document.getElementById(newErrors[0]);
-    firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    return;
-  }
-
-  setErrors([]);
-
-  // Pass clientData to the PDF generator
-  generateWiredNomadPDF({
-    totalPrice,
-    totalDays,
-    platform,
-    webPages,
-    selectedAppFeatures,
-    selectedFeatures,
-    selectedDomain,
-    selectedHosting,
-    maintenanceMonths,
-    paymentPlan,
-    pricingData,
-    client: clientData // <--- New field
+  const [errors, setErrors] = useState<string[]>([]);
+  const [priceAdjustment, setPriceAdjustment] = useState({ percent: 0, amount: 0, type: 'none' });
+  
+  const [clientData, setClientData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    companyName: "",
+    abn: ""
   });
-};
+
+  const handleDownload = () => {
+    const newErrors: string[] = [];
+    if (!platform.web && !platform.app) newErrors.push("platform");
+    if (!clientData.firstName) newErrors.push("firstName");
+    if (!clientData.lastName) newErrors.push("lastName");
+    if (!clientData.email.includes("@")) newErrors.push("email");
+    if (!clientData.phone) newErrors.push("phone");
+
+    if (newErrors.length > 0) {
+      setErrors(newErrors);
+      const firstError = document.getElementById(newErrors[0]);
+      firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    setErrors([]);
+    generateWiredNomadPDF({
+      totalPrice,
+      totalDays,
+      platform,
+      priceAdjustment,
+      webPages,
+      selectedAppFeatures,
+      selectedFeatures,
+      selectedDomain,
+      selectedHosting,
+      maintenanceMonths,
+      paymentPlan,
+      pricingData,
+      client: clientData 
+    });
+  };
 
   useEffect(() => {
-    let price = 0;
-    let days = 0;
+    let currentPrice = 0;
+    let currentDays = 0;
 
+    // 1. Platform & Features Logic
     if (platform.web) { 
-      price += pricingData.platforms.website.price + (webPages - 1) * pricingData.platforms.website.perPagePrice; 
-      days += pricingData.platforms.website.days + (webPages - 1) * pricingData.platforms.website.perPageDays; 
+      currentPrice += pricingData.platforms.website.price + (webPages - 1) * pricingData.platforms.website.perPagePrice; 
+      currentDays += pricingData.platforms.website.days + (webPages - 1) * pricingData.platforms.website.perPageDays; 
     }
     
     if (platform.app) { 
-      price += pricingData.platforms.mobileApp.price; 
-      days += pricingData.platforms.mobileApp.days; 
+      currentPrice += pricingData.platforms.mobileApp.price; 
+      currentDays += pricingData.platforms.mobileApp.days; 
       selectedAppFeatures.forEach(id => {
         const feature = pricingData.appSpecificFeatures.find(f => f.id === id);
-        if (feature) { price += feature.price; days += feature.days; }
+        if (feature) { currentPrice += feature.price; currentDays += feature.days; }
       });
-    } else {
-      if (selectedAppFeatures.length > 0) setSelectedAppFeatures([]);
     }
 
     selectedFeatures.forEach(id => {
       const feature = pricingData.features.find(f => f.id === id);
-      if (feature) { price += feature.price; days += feature.days; }
+      if (feature) { currentPrice += feature.price; currentDays += feature.days; }
     });
 
+    // 2. Infrastructure Logic
     const dom = pricingData.infrastructure.domain.find(d => d.id === selectedDomain);
     const host = pricingData.infrastructure.hosting.find(h => h.id === selectedHosting);
-   price += (dom?.price || 0) + (host?.price || 0) + (maintenanceMonths * 150);
+    currentPrice += (dom?.price || 0) + (host?.price || 0) + (maintenanceMonths * 150);
 
-    // Apply Incentive/Surcharge Strategy
+    // 3. Payment Plan Modifier Logic
+    const baseBeforeModifier = currentPrice;
+    let modifier = 0;
+    let type = 'none';
+
     switch (paymentPlan) {
       case "50-50":
-        price *= 0.90; // 10% Discount
+        modifier = -0.10;
+        type = 'discount';
         break;
       case "weekly":
-        price *= 0.95; // 5% Discount
+        modifier = -0.05;
+        type = 'discount';
         break;
       case "fortnightly":
-        price *= 1.00; // Baseline (Standard)
+        modifier = 0;
+        type = 'none';
         break;
       case "milestones":
-        price *= 1.05; // 5% Surcharge
+        modifier = 0.05;
+        type = 'surcharge';
         break;
       case "monthly":
-        price *= 1.08; // 8% Surcharge
+        modifier = 0.08;
+        type = 'surcharge';
         break;
       case "daily":
-        price *= 1.15; // 15% Surcharge
-        break;
-      default:
+        modifier = 0.15;
+        type = 'surcharge';
         break;
     }
 
-    setTotalPrice(price);
-    setTotalDays(days);
+    const finalPrice = baseBeforeModifier * (1 + modifier);
+    
+    setPriceAdjustment({
+      percent: Math.abs(modifier * 100),
+      amount: Math.abs(finalPrice - baseBeforeModifier),
+      type: type
+    });
+
+    setTotalPrice(finalPrice);
+    setTotalDays(currentDays); 
   }, [platform, webPages, selectedFeatures, selectedAppFeatures, selectedDomain, selectedHosting, maintenanceMonths, paymentPlan]);
 
   return ( 
@@ -181,14 +190,13 @@ const handleDownload = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-3 gap-12">
-        <div className="lg:col-span-2 space-y-16  pb-40">
+        <div className="lg:col-span-2 space-y-16 pb-40">
           <section>
             <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">01. Core Platform</h2>
             <div className="grid sm:grid-cols-2 gap-4 mb-8">
               <PlatformBox 
                 active={platform.web} 
                 onClick={() => {
-                  // Only allow toggle if the OTHER platform is active
                   if (!platform.web || platform.app) {
                     setPlatform(prev => ({...prev, web: !prev.web}));
                     setErrors(prev => prev.filter(e => e !== "platform"));
@@ -202,7 +210,6 @@ const handleDownload = () => {
               <PlatformBox 
                 active={platform.app} 
                 onClick={() => {
-                  // Only allow toggle if the OTHER platform is active
                   if (!platform.app || platform.web) {
                     setPlatform(prev => ({...prev, app: !prev.app}));
                     setErrors(prev => prev.filter(e => e !== "platform"));
@@ -231,7 +238,7 @@ const handleDownload = () => {
                 <motion.div key="app-config" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-8 space-y-6">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">App Functionalities</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {pricingData.appSpecificFeatures.map(({ id, label, price, Icon }) => (
+                    {pricingData.appSpecificFeatures.map(({ id, label, Icon }) => (
                       <button 
                         key={id} 
                         onClick={() => setSelectedAppFeatures(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} 
@@ -294,9 +301,7 @@ const handleDownload = () => {
             </div>
           </section>
 
-          
           <section className="grid sm:grid-cols-2 gap-8">
-            {/* 04. Maintenance */}
             <div>
               <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">04. Maintenance</h2>
               <select 
@@ -310,139 +315,91 @@ const handleDownload = () => {
               </select>
             </div>
 
-            {/* 05. Strategy */}
-            <div id="strategy-section" className="mb-10">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 font-mono">05. Payment plan</h2> 
-                {!paymentPlan && <span className="text-red-500 text-[10px] font-bold uppercase">Selection Required</span>}
+            <div id="strategy-section">
+              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">05. Payment plan</h2> 
+              <div className="grid grid-cols-3 gap-3">
+                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="50-50" title="50/50" desc="10% OFF" />
+                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="weekly" title="Weekly" desc="5% OFF" />
+                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="fortnightly" title="Fortnightly" desc="STD" />
+                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="milestones" title="Milestones" desc="+5%" />
+                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="monthly" title="Monthly" desc="+8%" />
+                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="daily" title="Daily" desc="+15%" />
+              </div>
+            </div>
+          </section>
+          <section id="client-info-section">
+            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">06. Client Identification</h2>
+            <div className="grid sm:grid-cols-2 gap-6 bg-zinc-900/30 p-8 rounded-[2.5rem] border border-zinc-800">
+              
+              {/* First Name */}
+              <div id="firstName" className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">First Name *</label>
+                <input 
+                  type="text" 
+                  value={clientData.firstName}
+                  onChange={(e) => setClientData({...clientData, firstName: e.target.value})}
+                  className={`w-full bg-zinc-950 border ${errors.includes("firstName") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
+                />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                {/* Row 1: High Incentive / Standard */}
-                <PaymentOption 
-                  current={paymentPlan} 
-                  set={setPaymentPlan} 
-                  id="50-50" 
-                  title="50/50" 
-                  desc="10% OFF" 
+              {/* Last Name */}
+              <div id="lastName" className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Last Name *</label>
+                <input 
+                  type="text" 
+                  value={clientData.lastName}
+                  onChange={(e) => setClientData({...clientData, lastName: e.target.value})}
+                  className={`w-full bg-zinc-950 border ${errors.includes("lastName") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
                 />
-                <PaymentOption 
-                  current={paymentPlan} 
-                  set={setPaymentPlan} 
-                  id="weekly" 
-                  title="Weekly" 
-                  desc="5% OFF" 
-                />
-                <PaymentOption 
-                  current={paymentPlan} 
-                  set={setPaymentPlan} 
-                  id="fortnightly" 
-                  title="Fortnightly" 
-                  desc="STD" 
-                />
+              </div>
 
-                {/* Row 2: Management Surcharges */}
-                <PaymentOption 
-                  current={paymentPlan} 
-                  set={setPaymentPlan} 
-                  id="milestones" 
-                  title="Milestones" 
-                  desc="+5%" 
+              {/* Email */}
+              <div id="email" className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Email Address *</label>
+                <input 
+                  type="email" 
+                  value={clientData.email}
+                  onChange={(e) => setClientData({...clientData, email: e.target.value})}
+                  className={`w-full bg-zinc-950 border ${errors.includes("email") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
                 />
-                <PaymentOption 
-                  current={paymentPlan} 
-                  set={setPaymentPlan} 
-                  id="monthly" 
-                  title="Monthly" 
-                  desc="+8%" 
+              </div>
+
+              {/* Phone */}
+              <div id="phone" className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Phone Number *</label>
+                <input 
+                  type="tel" 
+                  value={clientData.phone}
+                  onChange={(e) => setClientData({...clientData, phone: e.target.value})}
+                  className={`w-full bg-zinc-950 border ${errors.includes("phone") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
                 />
-                <PaymentOption 
-                  current={paymentPlan} 
-                  set={setPaymentPlan} 
-                  id="daily" 
-                  title="Daily" 
-                  desc="+15%" 
+              </div>
+
+              {/* Company Name */}
+              <div id="companyName" className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Company Name (Optional)</label>
+                <input 
+                  type="text" 
+                  value={clientData.companyName}
+                  onChange={(e) => setClientData({...clientData, companyName: e.target.value})}
+                  placeholder="e.g. Acme Corp"
+                  className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+
+              {/* Company ABN */}
+              <div id="abn" className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Business ABN (Optional)</label>
+                <input 
+                  type="text" 
+                  value={clientData.abn}
+                  onChange={(e) => setClientData({...clientData, abn: e.target.value})}
+                  placeholder="XX XXX XXX XXX"
+                  className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl focus:border-blue-500 outline-none transition-all"
                 />
               </div>
             </div>
           </section>
-            <section id="client-info-section">
-              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">06. Client Identification</h2>
-              
-              <div className="grid sm:grid-cols-2 gap-6 bg-zinc-900/30 p-8 rounded-[2.5rem] border border-zinc-800">
-                {/* First Name */}
-                <div id="firstName" className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">First Name *</label>
-                  <input 
-                    type="text" 
-                    value={clientData.firstName}
-                    onChange={(e) => setClientData({...clientData, firstName: e.target.value})}
-                    className={`w-full bg-zinc-950 border ${errors.includes("firstName") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
-                    placeholder="John"
-                  />
-                </div>
-
-                {/* Last Name */}
-                <div id="lastName" className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Last Name *</label>
-                  <input 
-                    type="text" 
-                    value={clientData.lastName}
-                    onChange={(e) => setClientData({...clientData, lastName: e.target.value})}
-                    className={`w-full bg-zinc-950 border ${errors.includes("lastName") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
-                    placeholder="Doe"
-                  />
-                </div>
-
-                {/* Email */}
-                <div id="email" className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Email Address *</label>
-                  <input 
-                    type="email" 
-                    value={clientData.email}
-                    onChange={(e) => setClientData({...clientData, email: e.target.value})}
-                    className={`w-full bg-zinc-950 border ${errors.includes("email") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
-                    placeholder="john@company.com"
-                  />
-                </div>
-
-                {/* Phone */}
-                <div id="phone" className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Phone Number *</label>
-                  <input 
-                    type="tel" 
-                    value={clientData.phone}
-                    onChange={(e) => setClientData({...clientData, phone: e.target.value})}
-                    className={`w-full bg-zinc-950 border ${errors.includes("phone") ? 'border-red-500' : 'border-zinc-800'} p-4 rounded-xl focus:border-blue-500 outline-none transition-all`}
-                    placeholder="+61 400 000 000"
-                  />
-                </div>
-
-                {/* Company Name (Optional) */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Company Name</label>
-                  <input 
-                    type="text" 
-                    value={clientData.companyName}
-                    onChange={(e) => setClientData({...clientData, companyName: e.target.value})}
-                    className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl focus:border-blue-500 outline-none transition-all"
-                    placeholder="Optional"
-                  />
-                </div>
-
-                {/* ABN (Optional) */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">ABN (Australia)</label>
-                  <input 
-                    type="text" 
-                    value={clientData.abn}
-                    onChange={(e) => setClientData({...clientData, abn: e.target.value})}
-                    className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl focus:border-blue-500 outline-none transition-all"
-                    placeholder="XX XXX XXX XXX"
-                  />
-                </div>
-              </div>
-            </section>
         </div>
 
         <div className="lg:col-span-1 ">
@@ -460,7 +417,25 @@ const handleDownload = () => {
 
             <div className="border-t border-zinc-800 pt-8 mb-8">
               <span className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Investment Total</span>
-              <div className="text-6xl font-black mt-2 tracking-tighter">${totalPrice.toLocaleString()}</div>
+              <div className="text-6xl font-black mt-2 tracking-tighter">${Math.round(totalPrice).toLocaleString()}</div> 
+
+              <AnimatePresence>
+                {priceAdjustment.type !== 'none' && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`mt-3 flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider w-fit ${
+                      priceAdjustment.type === 'discount' 
+                      ? 'bg-emerald-500/10 text-emerald-500' 
+                      : 'bg-orange-500/10 text-orange-400'
+                    }`}
+                  >
+                    {priceAdjustment.type === 'discount' ? '-' : '+'} 
+                    {priceAdjustment.percent}% {paymentPlan.toUpperCase()} PLAN 
+                    ({priceAdjustment.type === 'discount' ? 'SAVED' : 'FEE'}: ${Math.round(priceAdjustment.amount).toLocaleString()})
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             <button 
               onClick={handleDownload} 
@@ -476,7 +451,7 @@ const handleDownload = () => {
   );
 }
 
-// --- HELPERS ---
+// --- HELPERS (STAY SAME) ---
 function PlatformBox({ active, onClick, icon, label, price }: any) {
   return (
     <button onClick={onClick} className={`p-6 rounded-3xl border-2 text-left transition-all ${active ? 'border-blue-500 bg-blue-500/5' : 'border-zinc-800 bg-zinc-900/30'}`}>
