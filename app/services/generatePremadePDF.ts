@@ -78,11 +78,7 @@ export const generatePremadePDF = (data: PremadePDFProps) => {
   if (client.companyName) {
     doc.text(`${client.companyName} ${client.abn ? `(ABN: ${client.abn})` : ''}`, 14, 73);
   }
-
-  // --- LEGAL CONTENT ---
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("DIGITAL SERVICES AGREEMENT", 14, 85);
+ 
 
   const fontSize = 9;
   const spacing = fontSize * 1.2 * 0.3527; 
