@@ -313,7 +313,7 @@ export default function AdvancedQuotePage() {
   </div>
 </section>
     {/* Section 3: Shared Modules */}  
-          <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-12 font-mono">{t.maintenance}</h2> 
+          <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-12 font-mono">{t.sharedModules}</h2> 
              
                
           <section className="grid sm:grid-cols-2 gap-8">
@@ -331,30 +331,7 @@ export default function AdvancedQuotePage() {
             })}
  
           </section>
-          <section className="grid sm:grid-cols-2 gap-8"> 
-          {/* Hosting Tiers Rendering */}
-         {pricingData.infrastructure.hosting.map(h => {
-            const label = t.infrastructureList[h.id as keyof typeof t.infrastructureList];
-            const desc = t.infrastructureList[`${h.id}_desc` as keyof typeof t.infrastructureList];
-            return (
-              <button 
-                key={h.id} 
-                onClick={() => setSelectedHosting(h.id)} 
-                className={`w-full p-4 rounded-xl border text-left transition-all ${
-                  selectedHosting === h.id 
-                    ? 'border-blue-500 bg-blue-500/10' 
-                    : 'border-zinc-800 bg-zinc-900/30'
-                }`}
-              >
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-bold text-sm">{label}</span>
-                  <span className="font-mono text-xs text-blue-400">${h.price}</span>
-                </div>
-                <div className="text-[10px] text-zinc-500 italic">{desc}</div>
-              </button>
-            );
-          })}
-        </section>
+         
          
 
           {/* Section 4 & 5: Maintenance & Payment Plan */}
@@ -473,7 +450,7 @@ export default function AdvancedQuotePage() {
             <div className="space-y-6 mb-10">
               <SummaryDetail icon={<Clock size={16}/>} label={t.delivery} value={`${totalDays} ${t.workDaysSuffix}`} />
               <SummaryDetail icon={<ShieldCheck size={16}/>} label={t.warranty} value={`${maintenanceMonths} ${t.monthsSuffix}`} />
-              <SummaryDetail icon={<Server size={16}/>} label={t.cloud} value={pricingData.infrastructure.hosting.find(h => h.id === selectedHosting)?.label || ""} />
+              <SummaryDetail icon={<Server size={16}/>} label={t.cloud} value={pricingData.infrastructure.hosting.find(h => h.id === selectedHosting)?.price || ""} />
             </div>
 
             <div className="border-t border-zinc-800 pt-8 mb-8">
