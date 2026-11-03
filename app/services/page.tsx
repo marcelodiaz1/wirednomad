@@ -9,7 +9,13 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link"; 
 import { generatePremadePDF } from "./generatePremadePDF";
-
+import { dictionaries, Locale } from "@/lib/dictionaries";
+const iconMap = [
+  <Code2 key="0" className="text-blue-500" />,
+  <Smartphone key="1" className="text-purple-500" />,
+  <Sparkles key="2" className="text-amber-500" />,
+  <Layout key="3" className="text-emerald-500" />
+];
 const services = [
   {
     title: "Web Engineering",
@@ -120,6 +126,8 @@ interface SelectedPlanInfo {
 }
 
 export default function ServicesPage() {
+  const [locale, setLocale] = useState<Locale>("en");
+  const t = dictionaries[locale].service;
   const [activeCategory, setActiveCategory] = useState<CategoryType>('websites');
   const [paymentPlan, setPaymentPlan] = useState<PlanType>('monthly');
 
@@ -139,23 +147,23 @@ export default function ServicesPage() {
       return { 
         installment: totalPrice, 
         iterations: 1, 
-        label: "Upfront Investment",
-        subLabel: "Single Payment"
+        label: t.paymentPlans.full || "Upfront Investment",
+        subLabel: t.paymentPlans.full || "Single Payment"
       };
     }
 
     let iterations = 12; 
-    let label = "Per Month";
-    let subLabel = "12 Monthly Payments";
+    let label = t.paymentPlans.monthly || "Per Month";
+    let subLabel = t.paymentPlans.monthly || "12 Monthly Payments";
 
     if (paymentPlan === "weekly") {
       iterations = 52;
-      label = "Per Week";
-      subLabel = "52 Weekly Installments";
+      label = t.paymentPlans.weekly || "Per Week";
+      subLabel = t.paymentPlans.weekly || "52 Weekly Installments";
     } else if (paymentPlan === "fortnightly") {
       iterations = 26;
-      label = "Per Fortnight";
-      subLabel = "26 Fortnightly Installments";
+      label = t.paymentPlans.fortnightly || "Per Fortnight";
+      subLabel = t.paymentPlans.fortnightly || "26 Fortnightly Installments";
     }
 
     const installment = Math.round(totalPrice / iterations);
@@ -194,7 +202,7 @@ export default function ServicesPage() {
 
   return (
     <div className="bg-[#050505] text-white min-h-screen font-sans overflow-x-hidden">
-      <Navbar /> 
+      <Navbar locale={locale} onLocaleChange={setLocale} />
 
       {/* --- SERVICES HERO SECTION --- */}
       <section className="pt-32 pb-20 px-6">
@@ -205,17 +213,14 @@ export default function ServicesPage() {
               animate={{ opacity: 1, y: 0 }}
               className="text-6xl md:text-8xl font-black tracking-tighter mb-8 italic uppercase"
             >
-              Our <span className="text-blue-600">Expertise.</span>
+              {t.heroTitle || "Our"} 
             </motion.h1>
             <p className="text-zinc-400 text-xl leading-relaxed">
-              We build digital products that combine technical excellence with 
-              disruptive design. From startups to enterprises, we deliver 
-              scalable solutions that drive growth.
+              {t.heroDesc}
             </p>
           </div>
-
           <div className="grid md:grid-cols-2 gap-6 mt-24">
-            {services.map((service, index) => (
+            {t.services.map((service, index) => (
               <motion.div 
                 key={index}
                 initial={{ opacity: 0, y: 30 }}
@@ -225,7 +230,7 @@ export default function ServicesPage() {
                 className="group relative p-10 bg-zinc-900/30 border border-white/5 rounded-[2.5rem] hover:bg-zinc-900/50 transition-all"
               >
                 <div className="mb-6 p-4 bg-black rounded-2xl w-fit group-hover:scale-110 transition-transform">
-                  {service.icon}
+                  {iconMap[index]}
                 </div>
                 <h3 className="text-3xl font-bold mb-4 tracking-tight">{service.title}</h3>
                 <p className="text-zinc-500 mb-8 leading-relaxed">
@@ -239,7 +244,7 @@ export default function ServicesPage() {
                   ))}
                 </ul>
                 <button className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-blue-500 group-hover:text-white transition-colors">
-                  Learn More <ArrowUpRight size={18} />
+                  {locale === 'es' ? 'Saber Más' : locale === 'zh-TW' ? '了解更多' : 'Learn More'} <ArrowUpRight size={18} />
                 </button>
               </motion.div>
             ))}
@@ -252,19 +257,27 @@ export default function ServicesPage() {
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
           <div>
             <div className="text-4xl font-black mb-2">99%</div>
-            <div className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Uptime Guaranteed</div>
+            <div className="text-xs text-zinc-500 uppercase tracking-widest font-bold">
+              {t.trustUptime || "Uptime Guaranteed"}
+            </div>
           </div>
           <div>
             <div className="text-4xl font-black mb-2">10+</div>
-            <div className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Years Experience</div>
+            <div className="text-xs text-zinc-500 uppercase tracking-widest font-bold">
+              {t.trustExp || "Years Experience"}
+            </div>
           </div>
           <div>
             <div className="text-4xl font-black mb-2">24/7</div>
-            <div className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Priority Support</div>
+            <div className="text-xs text-zinc-500 uppercase tracking-widest font-bold">
+              {t.trustSupport || "Priority Support"}
+            </div>
           </div>
           <div>
             <div className="text-4xl font-black mb-2">WCAG</div>
-            <div className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Accessibility Lead</div>
+            <div className="text-xs text-zinc-500 uppercase tracking-widest font-bold">
+              {t.trustAccessibility || "Accessibility Lead"}
+            </div>
           </div>
         </div>
       </section>
@@ -275,10 +288,10 @@ export default function ServicesPage() {
           
           <div className="text-center mb-20">
             <h2 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 italic uppercase">
-              PREMADE <span className="text-blue-600">PLANS.</span>
-            </h2>
+              {t.premadeTitle || "PREMADE"}{" "}
+          </h2>
             <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
-              Select an optimized operational tier. Scale across flexible iterations designed to accommodate startup cash flows or enterprise speed requirements.
+              {t.premadeDesc}
             </p>
 
             {/* Controls Base Wrapper */}
@@ -286,45 +299,44 @@ export default function ServicesPage() {
               
               {/* Category Switches */}
               <div className="p-1.5 bg-zinc-900/80 border border-white/5 rounded-2xl flex gap-2">
-                {(['websites', 'apps', 'hybrid'] as CategoryType[]).map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                      activeCategory === cat 
-                        ? 'bg-blue-600 text-white shadow-lg' 
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    {cat === 'hybrid' ? 'Web + App' : cat}
-                  </button>
-                ))}
-              </div>
-
+              {(['websites', 'apps', 'hybrid'] as CategoryType[]).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    activeCategory === cat 
+                      ? 'bg-blue-600 text-white shadow-lg' 
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {t.categories[cat]}
+                </button>
+              ))}
+            </div>
               {/* Frequency Installments Switch */}
-              <div className="p-1.5 bg-zinc-900/80 border border-white/5 rounded-2xl flex gap-2">
-                {(['weekly', 'fortnightly', 'monthly', 'full'] as PlanType[]).map((plan) => (
-                  <button
-                    key={plan}
-                    onClick={() => setPaymentPlan(plan)}
-                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                      paymentPlan === plan 
-                        ? 'bg-white text-black font-black' 
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    {plan === 'full' ? 'Upfront' : plan.replace('ly', '')}
-                  </button>
-                ))}
-              </div>
+          <div className="p-1.5 bg-zinc-900/80 border border-white/5 rounded-2xl flex gap-2">
+              {(['weekly', 'fortnightly', 'monthly', 'full'] as PlanType[]).map((plan) => (
+                <button
+                  key={plan}
+                  onClick={() => setPaymentPlan(plan)}
+                  className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    paymentPlan === plan 
+                      ? 'bg-white text-black font-black' 
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {t.paymentPlans[plan]}
+                </button>
+              ))}
+            </div>
 
             </div>
           </div>
 
           {/* Pricing Grid Layout */}
-          <div className="grid lg:grid-cols-3 gap-8 items-start">
+         <div className="grid lg:grid-cols-3 gap-8 items-start">
             <AnimatePresence mode="wait">
-              {plansData[activeCategory].map((plan, idx) => {
+              {t.plansData[activeCategory].map((plan, idx) => {
                 const { installment, label, subLabel } = calculateInstallments(plan.price, plan.days);
                 
                 return (
@@ -342,7 +354,7 @@ export default function ServicesPage() {
                   >
                     {idx === 1 && (
                       <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-full shadow-md">
-                        Recommended
+                        {t.recommended}
                       </span>
                     )}
 
@@ -351,7 +363,7 @@ export default function ServicesPage() {
                       <div className="flex justify-between items-start mb-4">
                         <h3 className="text-2xl font-black uppercase tracking-tight italic leading-none">{plan.name}</h3>
                         <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-bold bg-black/40 px-3 py-1 rounded-lg shrink-0">
-                          <Calendar size={12} className="text-blue-500" /> {plan.days} Days
+                          <Calendar size={12} className="text-blue-500" /> {plan.days} {t.daysLabel}
                         </div>
                       </div>
                       
@@ -372,7 +384,7 @@ export default function ServicesPage() {
                         </div>
                         {paymentPlan !== 'full' && (
                           <div className="text-[11px] text-zinc-400 mt-2 border-t border-white/5 pt-2 flex justify-between">
-                            <span>Total Contract Value:</span>
+                            <span>{t.totalContract}</span>
                             <span className="font-bold text-white">${plan.price.toLocaleString('en-US')} AUD</span>
                           </div>
                         )}
@@ -391,16 +403,15 @@ export default function ServicesPage() {
 
                     {/* Action Pipeline Stack */}
                     <div className="space-y-3 mt-auto w-full">
-                  
-
                       <button
                         onClick={() => handleReviewDraftClick(plan)}
-                       className={`w-full py-4 rounded-2xl text-center text-xs font-black uppercase tracking-widest transition-all duration-300 block ${
+                        className={`w-full py-4 rounded-2xl text-center text-xs font-black uppercase tracking-widest transition-all duration-300 block ${
                           idx === 1
                             ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-xl shadow-blue-600/10'
                             : 'bg-white text-black hover:bg-zinc-200'
-                        }`}>
-                        Deploy Project Tier
+                        }`}
+                      >
+                        {t.deployBtn}
                       </button>
                     </div>
                   </motion.div>
@@ -420,15 +431,14 @@ export default function ServicesPage() {
             viewport={{ once: true }}
           >
             <h2 className="text-5xl md:text-8xl font-black tracking-tighter mb-12 italic uppercase">
-              Ready to start your <br />
-              <span className="text-blue-600">next project?</span>
+              {t.ctaTitle || "Ready to start your"}  
             </h2>
             
             <Link 
               href="/quote" 
               className="inline-block bg-white text-black px-12 py-6 rounded-full font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-600 hover:text-white hover:scale-105 transition-all duration-300 shadow-2xl shadow-white/5"
             >
-              Get a quote 
+              {t.ctaBtn || "Get a quote"}
             </Link>
           </motion.div>
         </div>
@@ -448,7 +458,7 @@ export default function ServicesPage() {
               className="absolute inset-0 bg-black/80 backdrop-blur-md"
             />
 
-            {/* Modal Modal Sheet Content */}
+            {/* Modal Sheet Content */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -463,16 +473,18 @@ export default function ServicesPage() {
               </button>
 
               <h3 className="text-2xl font-black italic uppercase tracking-tight mb-2 text-white">
-                Client <span className="text-blue-500">Details.</span>
+                {t.modal.title || "Client"}
               </h3>
               <p className="text-zinc-400 text-xs mb-6">
-                Input your business credentials to automatically configure and map the generated ecosystem agreement document.
+                {t.modal.desc}
               </p>
 
               <form onSubmit={handleFormSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5 tracking-wider">First Name</label>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5 tracking-wider">
+                      {t.modal.firstName || "First Name"}
+                    </label>
                     <input 
                       type="text" required
                       value={clientForm.firstName}
@@ -481,7 +493,9 @@ export default function ServicesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5 tracking-wider">Last Name</label>
+                    <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5 tracking-wider">
+                      {t.modal.lastName || "Last Name"}
+                    </label>
                     <input 
                       type="text" required
                       value={clientForm.lastName}
@@ -492,7 +506,9 @@ export default function ServicesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5 tracking-wider">Email Address</label>
+                  <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5 tracking-wider">
+                    {t.modal.email || "Email Address"}
+                  </label>
                   <input 
                     type="email" required
                     value={clientForm.email}
@@ -502,7 +518,9 @@ export default function ServicesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5 tracking-wider">Company Name (Optional)</label>
+                  <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5 tracking-wider">
+                    {t.modal.companyName || "Company Name (Optional)"}
+                  </label>
                   <input 
                     type="text"
                     value={clientForm.companyName}
@@ -512,7 +530,9 @@ export default function ServicesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5 tracking-wider">ABN (Optional)</label>
+                  <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5 tracking-wider">
+                    {t.modal.abn || "ABN (Optional)"}
+                  </label>
                   <input 
                     type="text"
                     value={clientForm.abn}
@@ -525,7 +545,7 @@ export default function ServicesPage() {
                   type="submit"
                   className="w-full mt-2 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/20"
                 >
-                  Generate & Download Agreement
+                  {t.modal.submitBtn || "Generate & Download Agreement"}
                 </button>
               </form>
             </motion.div>
@@ -533,7 +553,7 @@ export default function ServicesPage() {
         )}
       </AnimatePresence>
       
-      <Footer/>
+      <Footer locale={locale} />
     </div>
   );
 }

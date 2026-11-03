@@ -7,16 +7,19 @@ import {
 } from "lucide-react";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import { dictionaries, Locale } from "@/lib/dictionaries";
 
 export default function ContactPage() {
+  const [locale, setLocale] = useState<Locale>("en");
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false); // Add this
+  const [loading, setLoading] = useState(false);
+
+  const t = dictionaries[locale].contact;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
-    // 1. Gather the data from the form
     const formData = new FormData(e.currentTarget);
     const data = {
       name: formData.get("name"),
@@ -26,7 +29,6 @@ export default function ContactPage() {
     };
 
     try {
-      // 2. Send it to your API
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,7 +50,8 @@ export default function ContactPage() {
 
   return (
     <div className="bg-[#050505] text-white min-h-screen font-sans selection:bg-blue-500/30">
-      <Navbar/> 
+      <Navbar locale={locale} onLocaleChange={setLocale} /> 
+
       {/* Hero Header */}
       <section className="pt-40 pb-20 px-6">
         <div className="max-w-7xl mx-auto">
@@ -58,11 +61,10 @@ export default function ContactPage() {
             className="max-w-3xl"
           >
             <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 italic uppercase">
-              Let's <span className="text-blue-600">Connect.</span>
+              {t.titlePre} <span className="text-blue-600">{t.titleAccent}</span>
             </h1>
             <p className="text-zinc-400 text-xl leading-relaxed">
-              Have a complex technical challenge or a design vision? Whether you're 
-              in Sydney or across the globe, I'm ready to discuss your next project.
+              {t.desc}
             </p>
           </motion.div>
         </div>
@@ -76,26 +78,26 @@ export default function ContactPage() {
             <div className="space-y-8">
               <ContactMethod 
                 icon={<MapPin className="text-blue-500" />}
-                title="Location"
-                detail="Sydney, NSW, Australia"
-                sub="Available for global remote projects"
+                title={t.methods.location.title}
+                detail={t.methods.location.detail}
+                sub={t.methods.location.sub}
               />
               <ContactMethod 
                 icon={<Mail className="text-purple-500" />}
-                title="Email"
-                detail="contact@wirednomad.xyz"
-                sub="Response within 24 hours"
+                title={t.methods.email.title}
+                detail={t.methods.email.detail}
+                sub={t.methods.email.sub}
               />
               <ContactMethod 
                 icon={<MessageSquare className="text-emerald-500" />}
-                title="Languages"
-                detail="English, Spanish, Mandarin"
-                sub="Seamless communication for global teams"
+                title={t.methods.languages.title}
+                detail={t.methods.languages.detail}
+                sub={t.methods.languages.sub}
               />
             </div>
 
             <div className="pt-12 border-t border-white/5">
-              <h4 className="text-xs font-black uppercase tracking-[0.3em] text-zinc-500 mb-6">Social Ecosystem</h4>
+              <h4 className="text-xs font-black uppercase tracking-[0.3em] text-zinc-500 mb-6">{t.socialEcosystem}</h4>
               <div className="flex gap-4">
                 <SocialLink icon={<Link size={20} />} href="#" />
                 <SocialLink icon={<Code size={20} />} href="#" />
@@ -115,33 +117,31 @@ export default function ContactPage() {
               >
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Full Name</label>
-                    <input required name="name" type="text" placeholder="John Doe" className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700" />
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">{t.form.fullName}</label>
+                    <input required name="name" type="text" placeholder={t.form.namePlaceholder} className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Email Address</label>
-                    <input name="email" required type="email" placeholder="john@example.com" className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700" />
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">{t.form.emailAddress}</label>
+                    <input name="email" required type="email" placeholder={t.form.emailPlaceholder} className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Project Type</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">{t.form.projectType}</label>
                   <select name="projectType" className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all text-zinc-400">
-                    <option>Web Application Engineering</option>
-                    <option>Mobile App Development (iOS/Android)</option>
-                    <option>UI/UX Design System</option>
-                    <option>AI / Automation Integration</option>
-                    <option>Accessibility Audit (WCAG)</option>
+                    {t.form.projectOptions.map((opt, i) => (
+                      <option key={i}>{opt}</option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Message</label>
-                  <textarea name="message" rows={5} placeholder="Tell me about your vision..." className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700 resize-none"></textarea>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">{t.form.message}</label>
+                  <textarea name="message" rows={5} placeholder={t.form.messagePlaceholder} className="w-full bg-black border border-white/10 rounded-2xl p-4 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-700 resize-none"></textarea>
                 </div>
 
                 <button disabled={loading} type="submit" className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-sm flex items-center justify-center gap-3 transition-all group shadow-xl shadow-blue-500/20">
-                  {loading ? "Transmitting..." : "Transmit Message"}  <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                  {loading ? t.form.transmitting : t.form.submitBtn}  <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 </button>
               </motion.form>
             ) : (
@@ -153,19 +153,20 @@ export default function ContactPage() {
                 <div className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-blue-500/50">
                   <CheckCircle2 size={40} className="text-white" />
                 </div>
-                <h3 className="text-3xl font-black mb-4">Transmission Received</h3>
+                <h3 className="text-3xl font-black mb-4">{t.success.title}</h3>
                 <p className="text-zinc-400 max-w-sm">
-                  Thank you for reaching out. I'll review your project details and get back to you within 24 hours.
+                  {t.success.desc}
                 </p>
                 <button onClick={() => setSubmitted(false)} className="mt-8 text-sm font-bold text-blue-500 hover:text-white transition-colors">
-                  Send another message
+                  {t.success.resetBtn}
                 </button>
               </motion.div>
             )}
           </div>
         </div>
       </section>
-      <Footer/>
+
+      <Footer locale={locale} />
     </div>
   );
 }

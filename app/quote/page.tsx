@@ -2,14 +2,13 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Check, ChevronLeft, Send, Sparkles, Clock, 
-  ShieldCheck, Smartphone, Globe, Palette, FileText,
-  Zap, Bell, MapPin, Camera, Share2, Database, Layers,
-  Server, HardDrive
+  Sparkles, Clock, ShieldCheck, Smartphone, Globe, FileText,
+  Zap, Bell, MapPin, Camera, Share2, Database, Server
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { generateWiredNomadPDF } from "./pdf-service";  
+import { dictionaries, Locale } from "@/lib/dictionaries";
 
 const pricingData = {
   platforms: {
@@ -17,36 +16,38 @@ const pricingData = {
     mobileApp: { price: 3000, days: 20 },
   },
   features: [
-    { id: "auth", label: "User Auth (Supabase)", price: 600, days: 4 },
-    { id: "stripe", label: "Stripe Payments", price: 800, days: 5 },
-    { id: "cms", label: "CMS Integration", price: 500, days: 3 },
-    { id: "seo", label: "Advanced SEO", price: 400, days: 2 },
-    { id: "pwa", label: "PWA Support", price: 700, days: 4 },
-    { id: "logo", label: "Branding & Logo", price: 600, days: 5 },
+    { id: "auth", price: 600, days: 4 },
+    { id: "stripe", price: 800, days: 5 },
+    { id: "cms", price: 500, days: 3 },
+    { id: "seo", price: 400, days: 2 },
+    { id: "pwa", price: 700, days: 4 },
+    { id: "logo", price: 600, days: 5 },
   ],
   appSpecificFeatures: [
-    { id: "push", label: "Push Notifications", price: 450, days: 3, Icon: Bell },
-    { id: "geo", label: "Geolocation/Maps", price: 900, days: 7, Icon: MapPin },
-    { id: "camera", label: "Camera Access", price: 600, days: 4, Icon: Camera },
-    { id: "social", label: "Social Sharing", price: 300, days: 2, Icon: Share2 },
-    { id: "db_sync", label: "Real-time Sync", price: 1500, days: 12, Icon: Database },
-    { id: "offline", label: "Offline Mode", price: 1200, days: 10, Icon: Zap },
+    { id: "push", price: 450, days: 3, Icon: Bell },
+    { id: "geo", price: 900, days: 7, Icon: MapPin },
+    { id: "camera", price: 600, days: 4, Icon: Camera },
+    { id: "social", price: 300, days: 2, Icon: Share2 },
+    { id: "db_sync", price: 1500, days: 12, Icon: Database },
+    { id: "offline", price: 1200, days: 10, Icon: Zap },
   ],
   infrastructure: {
     domain: [
-      { id: "dom_1", label: "1 Year Registration", price: 20 },
-      { id: "dom_2", label: "2 Years Registration", price: 38 },
-      { id: "dom_5", label: "5 Years (Long-term)", price: 85 },
+      { id: "dom_1", price: 20 },
+      { id: "dom_2", price: 38 },
+      { id: "dom_5", price: 85 },
     ],
     hosting: [
-      { id: "host_basic", label: "Standard Cloud", price: 150, desc: "Best for simple sites" },
-      { id: "host_pro", label: "Performance SSD", price: 350, desc: "High traffic handling" },
-      { id: "host_ent", label: "Dedicated Instance", price: 800, desc: "App-level power" },
+      { id: "host_basic", price: 150 },
+      { id: "host_pro", price: 350 },
+      { id: "host_ent", price: 800 },
     ]
   }
 };
-
 export default function AdvancedQuotePage() {
+  const [locale, setLocale] = useState<Locale>("en");
+  const t = dictionaries[locale].quote;
+
   const [platform, setPlatform] = useState({ web: true, app: false });
   const [webPages, setWebPages] = useState(1);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
@@ -98,15 +99,14 @@ export default function AdvancedQuotePage() {
       maintenanceMonths,
       paymentPlan,
       pricingData,
-      client: clientData 
+      client: clientData,
+      locale // <-- Pass the active locale state here
     });
   };
-
   useEffect(() => {
     let currentPrice = 0;
     let currentDays = 0;
 
-    // 1. Platform & Features Logic
     if (platform.web) { 
       currentPrice += pricingData.platforms.website.price + (webPages - 1) * pricingData.platforms.website.perPagePrice; 
       currentDays += pricingData.platforms.website.days + (webPages - 1) * pricingData.platforms.website.perPageDays; 
@@ -126,12 +126,10 @@ export default function AdvancedQuotePage() {
       if (feature) { currentPrice += feature.price; currentDays += feature.days; }
     });
 
-    // 2. Infrastructure Logic
     const dom = pricingData.infrastructure.domain.find(d => d.id === selectedDomain);
     const host = pricingData.infrastructure.hosting.find(h => h.id === selectedHosting);
     currentPrice += (dom?.price || 0) + (host?.price || 0) + (maintenanceMonths * 150);
 
-    // 3. Payment Plan Modifier Logic
     const baseBeforeModifier = currentPrice;
     let modifier = 0;
     let type = 'none';
@@ -177,22 +175,27 @@ export default function AdvancedQuotePage() {
 
   return ( 
     <div className="min-h-screen bg-zinc-950 text-white selection:bg-blue-500/30 font-sans">
-      <Navbar/>
+      <Navbar locale={locale} onLocaleChange={setLocale} />
+      
       <header className="pt-32 pb-12 px-6 max-w-4xl mx-auto text-center">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-6 inline-block">
-            Instant Estimates v2.0
+            {t.badge}
           </span>
           <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">
-            Transparent Pricing.
+            {t.title}
           </h1>
         </motion.div>
       </header>
 
       <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-3 gap-12">
         <div className="lg:col-span-2 space-y-16 pb-40">
+          
+          {/* Section 1: Core Platform */}
           <section>
-            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">01. Core Platform</h2>
+            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">
+              01. {t.corePlatform}
+            </h2>
             <div className="grid sm:grid-cols-2 gap-4 mb-8">
               <PlatformBox 
                 active={platform.web} 
@@ -203,7 +206,7 @@ export default function AdvancedQuotePage() {
                   }
                 }}
                 icon={<Globe />} 
-                label="Web Application" 
+                label={t.webApp} 
                 price={pricingData.platforms.website.price}
               />
               
@@ -216,7 +219,7 @@ export default function AdvancedQuotePage() {
                   }
                 }}
                 icon={<Smartphone />} 
-                label="iOS & Android App" 
+                label={t.mobileApp} 
                 price={pricingData.platforms.mobileApp.price}
               />
             </div>
@@ -225,115 +228,177 @@ export default function AdvancedQuotePage() {
               {platform.web && (
                 <motion.div key="web-config" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="bg-zinc-900/50 p-8 rounded-3xl border border-zinc-800 mb-6 overflow-hidden">
                   <div className="flex justify-between items-center mb-6">
-                    <span className="font-bold text-zinc-300">Total Unique Web Pages</span>
+                    <span className="font-bold text-zinc-300">{t.uniquePages}</span>
                     <span className="text-3xl font-black text-blue-500">{webPages}</span>
                   </div>
                   <input type="range" min="1" max="25" value={webPages} onChange={(e) => setWebPages(parseInt(e.target.value))} className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
                 </motion.div>
               )}
             </AnimatePresence>
-
             <AnimatePresence mode="wait">
               {platform.app && (
                 <motion.div key="app-config" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-8 space-y-6">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">App Functionalities</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">{t.appFunctionalities}</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {pricingData.appSpecificFeatures.map(({ id, label, Icon }) => (
-                      <button 
-                        key={id} 
-                        onClick={() => setSelectedAppFeatures(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} 
-                        className={`p-4 rounded-xl border text-left flex flex-col gap-2 transition-all ${selectedAppFeatures.includes(id) ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-800 bg-zinc-900/30'}`}
-                      >
-                        <div className={selectedAppFeatures.includes(id) ? 'text-blue-500' : 'text-zinc-600'}>
-                          <Icon size={16} />
-                        </div>
-                        <span className="text-[11px] font-bold leading-tight">{label}</span>
-                      </button>
-                    ))}
+                    {pricingData.appSpecificFeatures.map(({ id, Icon }) => {
+                      const featureLabel = t.appFeaturesList[id as keyof typeof t.appFeaturesList];
+                      return (
+                        <button 
+                          key={id} 
+                          onClick={() => setSelectedAppFeatures(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} 
+                          className={`p-4 rounded-xl border text-left flex flex-col gap-2 transition-all ${selectedAppFeatures.includes(id) ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-800 bg-zinc-900/30'}`}
+                        >
+                          <div className={selectedAppFeatures.includes(id) ? 'text-blue-500' : 'text-zinc-600'}>
+                            <Icon size={16} />
+                          </div>
+                          <span className="text-[11px] font-bold leading-tight">{featureLabel}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </section>
 
+          {/* Section 2: Infrastructure Hire */}
           <section>
-            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">02. Infrastructure Hire</h2>
-            <div className="grid sm:grid-cols-2 gap-8">
-              <div>
-                <label className="text-xs font-bold text-zinc-500 uppercase mb-4 block">Domain Registration</label>
-                <div className="space-y-2">
-                  {pricingData.infrastructure.domain.map(d => (
-                    <button key={d.id} onClick={() => setSelectedDomain(d.id)} className={`w-full p-4 rounded-xl border text-sm flex justify-between items-center transition-all ${selectedDomain === d.id ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-800 bg-zinc-900/30'}`}>
-                      {d.label} <span className="font-mono text-blue-400">${d.price}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-zinc-500 uppercase mb-4 block">Cloud Hosting Tier</label>
-                <div className="space-y-2">
-                  {pricingData.infrastructure.hosting.map(h => (
-                    <button key={h.id} onClick={() => setSelectedHosting(h.id)} className={`w-full p-4 rounded-xl border text-left transition-all ${selectedHosting === h.id ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-800 bg-zinc-900/30'}`}>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-bold text-sm">{h.label}</span>
-                        <span className="font-mono text-xs text-blue-400">${h.price}</span>
-                      </div>
-                      <div className="text-[10px] text-zinc-500 italic">{h.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
+  <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">{t.infrastructureHire}</h2>
+  <div className="grid sm:grid-cols-2 gap-8">
+    
+    {/* Domain Registration */}
+    <div>
+      <label className="text-xs font-bold text-zinc-500 uppercase mb-4 block">{t.domainRegistration}</label>
+      <div className="space-y-2">
+        {pricingData.infrastructure.domain.map(d => {
+          const domainLabel = t.infrastructureList[d.id as keyof typeof t.infrastructureList];
+          return (
+            <button 
+              key={d.id} 
+              onClick={() => setSelectedDomain(d.id)} 
+              className={`w-full p-4 rounded-xl border text-sm flex justify-between items-center transition-all ${selectedDomain === d.id ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-800 bg-zinc-900/30'}`}
+            >
+              <span>{domainLabel}</span> 
+              <span className="font-mono text-blue-400">${d.price}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
 
-          <section>
-            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">03. Shared Modules</h2>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {pricingData.features.map((f) => (
+    {/* Cloud Hosting Tier */}
+    <div>
+      <label className="text-xs font-bold text-zinc-500 uppercase mb-4 block">{t.cloudHostingTier}</label>
+      <div className="space-y-2">
+        {pricingData.infrastructure.hosting.map(h => {
+          const hostingLabel = t.infrastructureList[h.id as keyof typeof t.infrastructureList];
+          const hostingDesc = t.infrastructureList[`${h.id}_desc` as keyof typeof t.infrastructureList];
+          return (
+            <button 
+              key={h.id} 
+              onClick={() => setSelectedHosting(h.id)} 
+              className={`w-full p-4 rounded-xl border text-left transition-all ${selectedHosting === h.id ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-800 bg-zinc-900/30'}`}
+            >
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-bold text-sm">{hostingLabel}</span>
+                <span className="font-mono text-xs text-blue-400">${h.price}</span>
+              </div>
+              <div className="text-[10px] text-zinc-500 italic">{hostingDesc}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+
+  </div>
+</section>
+    {/* Section 3: Shared Modules */}  
+          <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-12 font-mono">{t.maintenance}</h2> 
+             
+               
+          <section className="grid sm:grid-cols-2 gap-8">
+            {pricingData.features.map((f) => {
+              const label = t.featuresList[f.id as keyof typeof t.featuresList];
+              return (
                 <FeatureToggle 
                   key={f.id}
                   active={selectedFeatures.includes(f.id)}
                   onClick={() => setSelectedFeatures(prev => prev.includes(f.id) ? prev.filter(i => i !== f.id) : [...prev, f.id])}
-                  label={f.label}
+                  label={label}
                   price={f.price}
                 />
-              ))}
-            </div>
+              );
+            })}
+ 
           </section>
+          <section className="grid sm:grid-cols-2 gap-8"> 
+          {/* Hosting Tiers Rendering */}
+         {pricingData.infrastructure.hosting.map(h => {
+            const label = t.infrastructureList[h.id as keyof typeof t.infrastructureList];
+            const desc = t.infrastructureList[`${h.id}_desc` as keyof typeof t.infrastructureList];
+            return (
+              <button 
+                key={h.id} 
+                onClick={() => setSelectedHosting(h.id)} 
+                className={`w-full p-4 rounded-xl border text-left transition-all ${
+                  selectedHosting === h.id 
+                    ? 'border-blue-500 bg-blue-500/10' 
+                    : 'border-zinc-800 bg-zinc-900/30'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-bold text-sm">{label}</span>
+                  <span className="font-mono text-xs text-blue-400">${h.price}</span>
+                </div>
+                <div className="text-[10px] text-zinc-500 italic">{desc}</div>
+              </button>
+            );
+          })}
+        </section>
+         
 
+          {/* Section 4 & 5: Maintenance & Payment Plan */}
           <section className="grid sm:grid-cols-2 gap-8">
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">04. Maintenance</h2>
+              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">{t.maintenance}</h2>
               <select 
                 value={maintenanceMonths} 
                 onChange={(e) => setMaintenanceMonths(Number(e.target.value))} 
                 className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-xl focus:border-blue-500 outline-none"
               >
-                <option value={3}>3 Months Priority Support</option>
-                <option value={6}>6 Months Priority Support</option>
-                <option value={12}>1 Year Managed Support</option>
+                <option value={3}>{t.maintenanceOptions.support3}</option>
+                <option value={6}>{t.maintenanceOptions.support6}</option>
+                <option value={12}>{t.maintenanceOptions.support12}</option>
               </select>
             </div>
 
             <div id="strategy-section">
-              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">05. Payment plan</h2> 
+              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">{t.paymentPlan}</h2> 
               <div className="grid grid-cols-3 gap-3">
-                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="50-50" title="50/50" desc="10% OFF" />
-                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="weekly" title="Weekly" desc="5% OFF" />
-                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="fortnightly" title="Fortnightly" desc="STD" />
-                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="milestones" title="Milestones" desc="+5%" />
-                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="monthly" title="Monthly" desc="+8%" />
-                <PaymentOption current={paymentPlan} set={setPaymentPlan} id="daily" title="Daily" desc="+15%" />
+                {Object.keys(t.paymentPlans).map((key) => {
+                  const planInfo = t.paymentPlans[key as keyof typeof t.paymentPlans];
+                  return (
+                    <PaymentOption 
+                      key={key}
+                      current={paymentPlan} 
+                      set={setPaymentPlan} 
+                      id={key} 
+                      title={planInfo.title} 
+                      desc={planInfo.desc} 
+                    />
+                  );
+                })}
               </div>
             </div>
           </section>
+
+          {/* Section 6: Client Identification */}
           <section id="client-info-section">
-            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">06. Client Identification</h2>
+            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 mb-6 font-mono">{t.clientIdentification}</h2>
             <div className="grid sm:grid-cols-2 gap-6 bg-zinc-900/30 p-8 rounded-[2.5rem] border border-zinc-800">
               
-              {/* First Name */}
               <div id="firstName" className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">First Name *</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">{t.firstName}</label>
                 <input 
                   type="text" 
                   value={clientData.firstName}
@@ -342,9 +407,8 @@ export default function AdvancedQuotePage() {
                 />
               </div>
 
-              {/* Last Name */}
               <div id="lastName" className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Last Name *</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">{t.lastName}</label>
                 <input 
                   type="text" 
                   value={clientData.lastName}
@@ -353,9 +417,8 @@ export default function AdvancedQuotePage() {
                 />
               </div>
 
-              {/* Email */}
               <div id="email" className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Email Address *</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">{t.email}</label>
                 <input 
                   type="email" 
                   value={clientData.email}
@@ -364,9 +427,8 @@ export default function AdvancedQuotePage() {
                 />
               </div>
 
-              {/* Phone */}
               <div id="phone" className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Phone Number *</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">{t.phone}</label>
                 <input 
                   type="tel" 
                   value={clientData.phone}
@@ -375,26 +437,24 @@ export default function AdvancedQuotePage() {
                 />
               </div>
 
-              {/* Company Name */}
               <div id="companyName" className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Company Name (Optional)</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">{t.companyName}</label>
                 <input 
                   type="text" 
                   value={clientData.companyName}
                   onChange={(e) => setClientData({...clientData, companyName: e.target.value})}
-                  placeholder="e.g. Acme Corp"
+                  placeholder={t.companyNamePlaceholder}
                   className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl focus:border-blue-500 outline-none transition-all"
                 />
               </div>
 
-              {/* Company ABN */}
               <div id="abn" className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Business ABN (Optional)</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">{t.abn}</label>
                 <input 
                   type="text" 
                   value={clientData.abn}
                   onChange={(e) => setClientData({...clientData, abn: e.target.value})}
-                  placeholder="XX XXX XXX XXX"
+                  placeholder={t.abnPlaceholder}
                   className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl focus:border-blue-500 outline-none transition-all"
                 />
               </div>
@@ -402,21 +462,22 @@ export default function AdvancedQuotePage() {
           </section>
         </div>
 
-        <div className="lg:col-span-1 ">
+        {/* Sticky Summary Card */}
+        <div className="lg:col-span-1">
           <div className="sticky top-12 bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 shadow-2xl">
             <div className="flex items-center gap-2 text-blue-500 mb-6">
               <Sparkles size={20} />
-              <span className="font-black uppercase tracking-tighter">Projected Quote</span>
+              <span className="font-black uppercase tracking-tighter">{t.projectedQuote}</span>
             </div>
 
             <div className="space-y-6 mb-10">
-              <SummaryDetail icon={<Clock size={16}/>} label="Delivery" value={`${totalDays} Work Days`} />
-              <SummaryDetail icon={<ShieldCheck size={16}/>} label="Warranty" value={`${maintenanceMonths} Months`} />
-              <SummaryDetail icon={<Server size={16}/>} label="Cloud" value={pricingData.infrastructure.hosting.find(h => h.id === selectedHosting)?.label || ""} />
+              <SummaryDetail icon={<Clock size={16}/>} label={t.delivery} value={`${totalDays} ${t.workDaysSuffix}`} />
+              <SummaryDetail icon={<ShieldCheck size={16}/>} label={t.warranty} value={`${maintenanceMonths} ${t.monthsSuffix}`} />
+              <SummaryDetail icon={<Server size={16}/>} label={t.cloud} value={pricingData.infrastructure.hosting.find(h => h.id === selectedHosting)?.label || ""} />
             </div>
 
             <div className="border-t border-zinc-800 pt-8 mb-8">
-              <span className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Investment Total</span>
+              <span className="text-zinc-500 text-xs font-bold uppercase tracking-widest">{t.investmentTotal}</span>
               <div className="text-6xl font-black mt-2 tracking-tighter">${Math.round(totalPrice).toLocaleString()}</div> 
 
               <AnimatePresence>
@@ -431,27 +492,28 @@ export default function AdvancedQuotePage() {
                     }`}
                   >
                     {priceAdjustment.type === 'discount' ? '-' : '+'} 
-                    {priceAdjustment.percent}% {paymentPlan.toUpperCase()} PLAN 
-                    ({priceAdjustment.type === 'discount' ? 'SAVED' : 'FEE'}: ${Math.round(priceAdjustment.amount).toLocaleString()})
+                    {priceAdjustment.percent}% {paymentPlan.toUpperCase()} {t.planLabelSuffix} 
+                    ({priceAdjustment.type === 'discount' ? t.saved : t.fee}: ${Math.round(priceAdjustment.amount).toLocaleString()})
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
+            
             <button 
               onClick={handleDownload} 
               className={`w-full h-16 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all ${errors.length > 0 ? 'bg-red-600/80' : 'bg-blue-600 hover:bg-blue-500'}`}
             >
-              {errors.length > 0 ? "Check Required Fields" : "Generate Proposal"} <FileText size={20} />
+              {errors.length > 0 ? t.checkRequiredFields : t.generateProposal} <FileText size={20} />
             </button>
           </div>
         </div>
       </div>
-      <Footer/>
+      <Footer locale={locale} />
     </div>
   );
 }
 
-// --- HELPERS (STAY SAME) ---
+// --- HELPER COMPONENTS ---
 function PlatformBox({ active, onClick, icon, label, price }: any) {
   return (
     <button onClick={onClick} className={`p-6 rounded-3xl border-2 text-left transition-all ${active ? 'border-blue-500 bg-blue-500/5' : 'border-zinc-800 bg-zinc-900/30'}`}>

@@ -6,12 +6,36 @@ import {
   Atom,  
   Boxes, 
   MessageCircle,
-  ArrowUpRight,
-  Mail,
-  MessageSquare
+  ArrowUpRight
 } from "lucide-react";
-export default function Footer() {
+import { dictionaries, Locale } from "@/lib/dictionaries";
+
+interface FooterProps {
+  locale: Locale;
+}
+
+export default function Footer({ locale }: FooterProps) {
   const currentYear = new Date().getFullYear();
+  const t = dictionaries[locale].footer;
+
+  const navItems = [
+    { label: t.nav.home, href: "/" },
+    { label: t.nav.services, href: "/services" },
+    { label: t.nav.about, href: "/about" },
+    { label: t.nav.contact, href: "/contact" }
+  ];
+
+  const solutionsItems = [
+    { label: t.solutions.webApps, href: "/services" },
+    { label: t.solutions.uiux, href: "/services" },
+    { label: t.solutions.seo, href: "/services" },
+    { label: t.solutions.cloud, href: "/services" }
+  ];
+
+  const legalItems = [
+    { label: t.legal.privacy, href: "/privacy" },
+    { label: t.legal.terms, href: "/terms" }
+  ];
 
   return (
     <footer className="relative bg-black pt-32 pb-12 px-6 border-t border-white/5 overflow-hidden">
@@ -30,7 +54,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-zinc-500 text-lg leading-relaxed max-w-sm mb-8 font-medium">
-              Engineering high-performance digital ecosystems for the next generation of industry leaders.
+              {t.tagline}
             </p>
             <div className="flex gap-4">
               {[
@@ -52,12 +76,12 @@ export default function Footer() {
           {/* Links Columns */}
           <div className="md:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-8">
             <div>
-              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-8">Navigation</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-8">{t.navigation}</h4>
               <ul className="space-y-4">
-                {['Home', 'Services', 'About', 'Contact'].map((item) => (
-                  <li key={item}>
-                    <Link href={`/${item.toLowerCase() === 'home' ? '' : item.toLowerCase()}`} className="text-zinc-400 hover:text-blue-500 text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-1 group">
-                      {item}
+                {navItems.map((item) => (
+                  <li key={item.label}>
+                    <Link href={item.href} className="text-zinc-400 hover:text-blue-500 text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-1 group">
+                      {item.label}
                       <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 -translate-y-1 transition-all" />
                     </Link>
                   </li>
@@ -66,12 +90,12 @@ export default function Footer() {
             </div>
 
             <div>
-              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-8">Solutions</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-8">{t.solutionsTitle}</h4>
               <ul className="space-y-4">
-                {['Web Apps', 'UI/UX Design', 'SEO Strategy', 'Cloud Arch'].map((item) => (
-                  <li key={item}>
-                    <Link href="/services" className="text-zinc-400 hover:text-white text-sm font-bold uppercase tracking-wider transition-colors">
-                      {item}
+                {solutionsItems.map((item) => (
+                  <li key={item.label}>
+                    <Link href={item.href} className="text-zinc-400 hover:text-white text-sm font-bold uppercase tracking-wider transition-colors">
+                      {item.label}
                     </Link>
                   </li>
                 ))}
@@ -79,12 +103,12 @@ export default function Footer() {
             </div>
 
             <div className="col-span-2 md:col-span-1">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-8">Legal</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-8">{t.legalTitle}</h4>
               <ul className="space-y-4">
-                {['Privacy', 'Terms'].map((item) => (
-                  <li key={item}>
-                    <Link href={`/${item.toLowerCase()}`} className="text-zinc-400 hover:text-white text-sm font-bold uppercase tracking-wider transition-colors">
-                      {item}
+                {legalItems.map((item) => (
+                  <li key={item.label}>
+                    <Link href={item.href} className="text-zinc-400 hover:text-white text-sm font-bold uppercase tracking-wider transition-colors">
+                      {item.label}
                     </Link>
                   </li>
                 ))}
@@ -108,10 +132,10 @@ export default function Footer() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Systems Operational</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">{t.systemsOperational}</span>
             </div>
             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-              Built with Next.js & Supabase
+              {t.builtWith}
             </div>
           </div>
         </div>
