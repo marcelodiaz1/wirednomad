@@ -1,56 +1,102 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import rocketIcon from "./rocket.png";
-export const generateWiredNomadPDF = (data: any) => {
-  const { 
-    client, 
-    totalPrice: basePrice,
-    totalDays, 
-    platform, 
-    webPages, 
-    selectedAppFeatures, 
-    selectedFeatures, 
-    selectedDomain, 
-    selectedHosting, 
-    paymentPlan,   
-    priceAdjustment,
-    pricingData 
+
+export interface WiredNomadPDFPayload {
+  locale?: "en" | "es" | "zh";
+  currency: "AUD" | "CLP" | "TWD";
+  currencySymbol: string;
+  exchangeRate: number;
+  projectType: {
+    id: string;
+    title: string;
+    subtitle: string;
+    basePrice: number;
+    baseHours: number;
+  };
+  selectedModules: Array<{
+    id: string;
+    name: string;
+    category: string;
+    hours: number;
+    price: number;
+  }>;
+  contract: {
+    years: 1 | 2 | 3;
+    weeks: number;
+    label: string;
+    discountPercent: number;
+  };
+  totals: {
+    totalHours: number;
+    estimatedDays: number;
+    subtotal: number;
+    discountAmount: number;
+    totalPrice: number;
+    weeklyPayment: number;
+  };
+  client: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    companyName?: string;
+    abn?: string;
+  };
+}
+
+export const generateWiredNomadPDF = (data: WiredNomadPDFPayload) => {
+  const {
+    currency = "AUD",
+    currencySymbol = "A$",
+    projectType,
+    selectedModules = [],
+    contract,
+    totals,
+    client,
   } = data;
 
   const doc = new jsPDF();
   const today = new Date();
-  const refCode = `WN-${Math.random().toString(36).toUpperCase().substring(7)}`; 
+  const refCode = `WN-${Math.random().toString(36).toUpperCase().substring(7)}`;
   const pageHeight = doc.internal.pageSize.height;
-  const finalPrice = Math.round(basePrice); 
 
   // --- 1. SETTINGS & HELPERS ---
+  const formatCurrency = (amount: number, allowDecimals = false) => {
+    const decimals = allowDecimals && currency === "AUD" ? 2 : 0;
+    return `${currencySymbol}${amount.toLocaleString("en-AU", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    })}`;
+  };
+
   const checkPage = (y: number, margin = 20) => {
     if (y > pageHeight - margin) {
       doc.addPage();
-      return 20; 
+      return 20;
     }
     return y;
   };
 
-  const formatDate = (days: number) => {
+  const formatDate = (daysToAdd: number) => {
     const d = new Date(today);
-    d.setDate(d.getDate() + days);
-    return d.toLocaleDateString('en-AU');
+    d.setDate(d.getDate() + daysToAdd);
+    return d.toLocaleDateString("en-AU");
   };
 
-  // --- 2. BRANDING HEADER (ROCKET REMOVED) ---
+  // --- 2. BRANDING HEADER ---
   doc.setFillColor(10, 10, 10);
-  doc.rect(0, 0, 210, 45, 'F');
-  
+  doc.rect(0, 0, 210, 45, "F");
+
   doc.setFillColor(37, 99, 235);
-  doc.rect(0, 45, 210, 1.5, 'F');
+  doc.rect(0, 45, 210, 1.5, "F");
 
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(26);
   doc.text("WIRED", 14, 25);
-  doc.setTextColor(37, 99, 235); 
-  doc.text("NOMAD", 48, 25); 
+  doc.setTextColor(37, 99, 235);
+  doc.text("NOMAD", 48, 25);
 
   doc.setTextColor(161, 161, 170);
   doc.setFontSize(9);
@@ -58,113 +104,115 @@ export const generateWiredNomadPDF = (data: any) => {
   doc.text("DIGITAL SYSTEMS & SOFTWARE ENGINEERING", 14, 33);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.text(`ABN: 15758394906 | SYDNEY, AU | VERSION 5.8 | REF: ${refCode}`, 14, 38);
-// --- THE ROCKET (TS-SAFE FIX) ---
+  doc.text(`ABN: 15758394906 | SYDNEY, AU | VERSION 6.0 | REF: ${refCode}`, 14, 38);
+
+  // Rocket Logo
   try {
-    // Cast to any or specifically access .src to satisfy jsPDF's string requirement
-    const imgPath = typeof rocketIcon === 'string' ? rocketIcon : (rocketIcon as any).src;
-    
+    const imgPath = typeof rocketIcon === "string" ? rocketIcon : (rocketIcon as any).src;
     if (imgPath) {
-      doc.addImage(imgPath, 'PNG', 175, 10, 22, 22, 'rocket_logo', 'FAST');
+      doc.addImage(imgPath, "PNG", 175, 10, 22, 22, "rocket_logo", "FAST");
     }
   } catch (e) {
     console.warn("Rocket icon could not be rendered in PDF:", e);
   }
-  // --- 2b. CLIENT INFO ---
+
+  // --- 2b. CLIENT & CONTRACT SNAPSHOT ---
   doc.setTextColor(30, 30, 30);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("CLIENT PARTNER:", 14, 58);
+  doc.text("CLIENT PARTNER:", 14, 56);
   doc.setFont("helvetica", "normal");
-  doc.text(`${client.firstName} ${client.lastName}`, 14, 63);
-  doc.text(`${client.email} | ${client.phone}`, 14, 68);
+  doc.text(`${client.firstName} ${client.lastName}`, 14, 61);
+  doc.text(`${client.email} | ${client.phone}`, 14, 66);
   if (client.companyName) {
-    doc.text(`${client.companyName} ${client.abn ? `(ABN: ${client.abn})` : ''}`, 14, 73);
+    doc.text(`${client.companyName} ${client.abn ? `(ID/ABN: ${client.abn})` : ""}`, 14, 71);
   }
 
-  // --- 3. LEGAL CONTENT (1.2x LINE HEIGHT) ---
+  // Contract Highlight Box (Right Side)
+  doc.setFillColor(244, 244, 245);
+  doc.roundedRect(122, 51, 74, 24, 2, 2, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(37, 99, 235);
+  doc.text("CONTRACT SUMMARY", 126, 56);
+  doc.setTextColor(24, 24, 27);
+  doc.setFontSize(9);
+  doc.text(`Plan: ${projectType.title}`, 126, 61);
+  doc.text(`Term: ${contract.label} (${contract.weeks} Weeks)`, 126, 66);
+  doc.text(`Weekly Fee: ${formatCurrency(totals.weeklyPayment, true)} ${currency}/wk`, 126, 71);
+
+  // --- 3. LEGAL CONTENT ---
+  doc.setTextColor(10, 10, 10);
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text("DIGITAL SERVICES AGREEMENT", 14, 85);
+  doc.text("DIGITAL SERVICES & SUBSCRIPTION AGREEMENT", 14, 85);
 
   const fontSize = 9;
   const lineHeightFactor = 1.2;
-  const spacing = fontSize * lineHeightFactor * 0.3527; 
+  const spacing = fontSize * lineHeightFactor * 0.3527;
 
   doc.setFontSize(fontSize);
-  const fullLegalText = `DIGITAL SERVICES AGREEMENT (V5.8)
-BETWEEN: WiredNomad, hereafter referred to as "WN", and ${client.firstName} ${client.lastName} ${client.companyName ? `of ${client.companyName}` : ''}, hereafter referred to as "The Client."
+  const fullLegalText = `DIGITAL SERVICES & SUBSCRIPTION AGREEMENT (V6.0)
+BETWEEN: WiredNomad, hereafter referred to as "WN", and ${client.firstName} ${client.lastName} ${client.companyName ? `of ${client.companyName}` : ""}, hereafter referred to as "The Client."
 
 ### INTRODUCTION
-This Agreement governs the terms and conditions under which WN will provide the digital services described herein. This contract supersedes any prior written or verbal agreements, even if they contain conflicting terms. The validity of this contract commences on the date the Client begins using the "Client Panel," or when the initial payment is received and validated by WN. By proceeding, the Client automatically agrees to these terms.
+This Agreement governs the terms and conditions under which WN will design, engineer, host, and maintain the modular digital solution selected by the Client. This contract supersedes any prior written or verbal agreements. The validity of this contract commences on the date the Client accesses the "Client Panel" or when the initial weekly installment is received and validated by WN.
 
-### 1. PAYMENT TERMS
-Billing Cycle: Payments are generated prior to project commencement. Payment amounts are disclosed via the email address provided in the "Client Panel."
-Final Settlement: Upon project completion, the Client is obligated to settle the remaining balance within 5 business days.
-Late Penalties: Failure to settle the balance within the specified timeframe will incur a daily penalty of 15% of the total project value.
-Currency: All prices are in Australian Dollars (AUD) plus GST (Goods and Services Tax), unless otherwise specified.
-Validation: Payments are typically validated within 1 to 48 business hours. WN reserves the right to delay deployment for reasonable periods without prior notice if administrative delays occur.
+### 1. SUBSCRIPTION & WEEKLY PAYMENT TERMS
+Contract Term: The Client commits to a ${contract.years}-year (${contract.weeks}-week) service agreement for the selected ${projectType.title} and ${selectedModules.length} modular feature(s).
+Weekly Installments: The total contract value of ${formatCurrency(totals.totalPrice)} (${currency}) is divided into ${contract.weeks} equal weekly payments of ${formatCurrency(totals.weeklyPayment, true)} (${currency}).
+Billing Cycle: Weekly payments are billed automatically in advance starting on the commencement date.
+Late Penalties: Overdue weekly installments not settled within 5 business days will incur a late fee of 15% on the overdue installment and may result in temporary service suspension.
+Currency & Taxes: All figures in this proposal are quoted in ${currency} (${currencySymbol}). Australian clients are subject to applicable GST.
+Validation: Payments are typically validated within 1 to 48 business hours.
 
-### 2. INTELLECTUAL PROPERTY RIGHTS
-All technology provided by WN is the exclusive, registered property of WN. The Client is granted a non-exclusive license to use the intellectual property and deliverables strictly as described in the project scope, provided all payments are settled in full. These usage rights continue after the termination of this contract only if no balance is outstanding.
+### 2. INTELLECTUAL PROPERTY & OWNERSHIP
+All underlying frameworks, proprietary modules, and technology provided by WN remain the registered property of WN during the active subscription term. The Client is granted an exclusive commercial license to operate the deliverables for their business. Upon full completion of all ${contract.weeks} weekly payments under the ${contract.label} term, full ownership rights of the custom frontend assets and client data transfer to the Client.
 
-### 3. SCOPE OF DEVELOPMENT & SERVICES
-The development strategy is based solely on the quotation sent to the Client’s registered email. Any development requests outside of this original quote ("Variations") must be re-evaluated and quoted separately. New service quotes will only be processed if all prior invoices are paid in full.
+### 3. MODULAR SCOPE & DEVELOPMENT HOURS
+The development scope is strictly defined by the Base Solution (${projectType.baseHours} hrs) and the ${selectedModules.length} selected module(s), totaling ${totals.totalHours} estimated engineering hours (~${totals.estimatedDays} working days). Any additional modules or custom features requested outside this scope ("Variations") can be added to the Client's subscription at WN's published modular rates.
 
-### 4. SERVERS & DOMAINS
-Term: Hosting and domain services are provided on a 1-year renewal basis.
-Migration: If the hosting service is not renewed, the Client will be granted FTP access for 7 days to migrate the site. Access is permanently revoked thereafter.
-Usage Policy: Services are provided on LINUX systems for standard business use. High-performance or critical-intensity sites require custom tiers.
-Prohibited Content: Use of servers for illegal purposes, copyright infringement, gaming servers, SPAM, or "Bandwidth/Disk space hogging" (e.g., mass streaming or unauthorized mirrors) is strictly prohibited and may result in immediate termination without refund.
+### 4. MANAGED HOSTING, DOMAINS & MAINTENANCE
+Included Infrastructure: Managed cloud hosting, SSL security certificates, routine updates, and technical support are included throughout the active ${contract.weeks}-week subscription term.
+Migration: Upon contract expiration or non-renewal, the Client will be granted FTP/export access for 7 days to migrate their assets, provided no balance is outstanding.
+Prohibited Content: Use of WN servers for illegal purposes, copyright infringement, gaming servers, SPAM, or excessive bandwidth/disk abuse is strictly prohibited and may result in immediate termination without refund.
 
 ### 5. ANTI-SPAM & EMAIL COMPLIANCE
-In accordance with the Spam Act 2003 (Cth), sending unsolicited commercial electronic messages is prohibited. All marketing emails must: Be sent only to recipients who have opted-in (Consent). Clearly identify the sender. Include a functional, easy-to-use "Unsubscribe" facility. WN reserves the right to suspend email services found in violation of these regulations.
+In accordance with the Spam Act 2003 (Cth) and international equivalents, sending unsolicited commercial electronic messages is prohibited. Marketing emails must only be sent to opted-in recipients and include a functional "Unsubscribe" link.
 
 ### 6. CORPORATE EMAIL & THIRD-PARTY CLIENTS
-WN is responsible only for the functionality of the Webmail platform (accessible via webmail.domain.com). While WN provides illustrative tutorials for third-party clients (Outlook, Gmail, Apple Mail, etc.), WN is not responsible for the configuration or connectivity issues of these external softwares. Individual mailbox capacity is capped at 2000 MB.
+WN is responsible only for the functionality of the Webmail platform. While WN provides setup guides for third-party clients (Outlook, Gmail, Apple Mail), WN is not liable for third-party software configuration issues. Individual mailbox capacity is capped at 2000 MB.
 
 ### 7. SEO & RANKING DISCLAIMER
-SEO projects are managed by internal and external global teams. While WN uses industry-standard strategies compatible with the latest Google algorithms, WN has no authority or influence over Google’s ranking results or the time required for indexing. Project timelines are estimates based on historical experience.
+While WN implements technical SEO best practices as specified in the selected modules, WN has no authority or influence over Google or third-party search engine ranking algorithms or indexing timelines.
 
-### 8. MODIFICATIONS & UPDATES
-WN reserves the right to charge for updates to site information or imagery requested after the final development has been delivered and the original contract payments concluded.
+### 8. LIMITATION OF WARRANTIES & LIABILITY
+Conversions: WN does not guarantee specific quantities of leads, sales, or traffic.
+Third-Parties: WN is not responsible for outages or fees from third-party payment processors (Stripe, PayPal, local gateways, etc.).
+Data Loss: While WN performs routine backups, the Client remains responsible for maintaining copies of critical business content.
 
-### 9. LIMITATION OF WARRANTIES & LIABILITY
-Conversions: WN does not guarantee specific quantities or qualities of leads, sales, or clicks.
-Third-Parties: WN is not responsible for errors or additional fees from third-party processors (PayPal, Stripe, Visa, etc.).
-Data Loss: While WN performs backups, the Client is ultimately responsible for their data. WN is not liable for business interruption or data loss. Recovery of content lost due to Client error may incur additional fees.
+### 9. EARLY CANCELLATION & SUSPENSION
+If the Client cancels the agreement prior to completing the ${contract.weeks}-week commitment, the remaining unpaid balance of the build value becomes due immediately, or WN may permanently revoke access to the hosted platform and proprietary modules.
 
-### 10. CANCELLATION & SUSPENSION
-WN reserves the right to suspend services immediately upon any payment discrepancy or failure. If the Client fails to resolve the payment after notice, the service will be permanently terminated for breach of contract.
+### 10. CONFIDENTIALITY & PRIVACY
+All proprietary data, credentials, and documentation exchanged between the parties are strictly confidential. This obligation persists for two (2) years after the termination of this contract.
 
-### 11. GENERAL EXCLUSIONS
-WN is not responsible for: Errors caused by Internet Service Providers (ISPs). Virus contamination on Client hardware. Third-party intrusions (Hacking), despite reasonable security measures. Backups for accounts exceeding 1000 MB of space.
-
-### 12. GOOGLE ADS POLICIES
-All advertising campaigns must strictly adhere to Google Advertising Policies. WN reserves the right to deactivate non-compliant campaigns without notice. The Client grants WN the right to manage campaign assets for the duration of the service.
-
-### 13. VIRTUAL IP & TELEPHONY
-WN acts as a strategic partner for telephony solutions. WN is not liable for occasional server outages from third-party telephony providers. Due to the sensitive nature of the configuration, the Client will not have direct administrative access to the virtual switchboard; it will be managed exclusively by WN.
-
-### 14. CONFIDENTIALITY & PRIVACY
-All information or documentation exchanged between the parties is considered Confidential. Neither party shall disclose such information to third parties without consent. This obligation persists for two (2) years after the termination of this contract.
-
-### 15. JURISDICTION & GOVERNING LAW
-The Client explicitly consents to the jurisdiction of the laws and courts of New South Wales, Australia. The Client waives any right to any other jurisdiction by reason of their current or future domicile. The Client shall bear all legal costs derived from any action taken against WN.
+### 11. JURISDICTION & GOVERNING LAW
+The Client explicitly consents to the jurisdiction of the laws and courts of New South Wales, Australia, waiving any other jurisdiction by reason of current or future domicile.
 
 ### ACCEPTANCE
-By proceeding with the initial payment, I hereby accept the terms and conditions stipulated in this Agreement, creating a binding commercial relationship with WiredNomad.`;
+By completing the initial weekly payment of ${formatCurrency(totals.weeklyPayment, true)} (${currency}), the Client accepts all terms stipulated in this Agreement, creating a binding commercial relationship with WiredNomad.`;
 
   const lines = doc.splitTextToSize(fullLegalText, 182);
   let currentY = 92;
 
   lines.forEach((line: string) => {
     currentY = checkPage(currentY);
-    if (line.startsWith('###')) {
+    if (line.startsWith("###")) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(fontSize + 1);
-      currentY += 2; 
-      doc.text(line.replace('### ', ''), 14, currentY);
+      currentY += 2;
+      doc.text(line.replace("### ", ""), 14, currentY);
       currentY += spacing + 1;
       doc.setFontSize(fontSize);
     } else {
@@ -174,122 +222,170 @@ By proceeding with the initial payment, I hereby accept the terms and conditions
     }
   });
 
-  // --- 4. ITEMISED INVESTMENT TABLE ---
-  doc.addPage(); 
-  doc.setTextColor(10, 10, 10);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text("ITEMISED INVESTMENT", 14, 25);
-
-  const tableRows: any[][] = [];
-  if (platform.web) {
-    const webCost = pricingData.platforms.website.price + (webPages - 1) * pricingData.platforms.website.perPagePrice;
-    tableRows.push(["Web Architecture", `${webPages} UI/UX Views`, `$${Math.round(webCost).toLocaleString()}`]);
-  }
-  if (platform.app) {
-    tableRows.push(["Mobile Development", "Native iOS & Android Build", `$${Math.round(pricingData.platforms.mobileApp.price).toLocaleString()}`]);
-    selectedAppFeatures.forEach((id: string) => {
-      const f = pricingData.appSpecificFeatures.find((feat: any) => feat.id === id);
-      if (f) tableRows.push([" - App Module", f.label, `$${Math.round(f.price).toLocaleString()}`]);
-    });
-  }
-  selectedFeatures.forEach((id: string) => {
-    const f = pricingData.features.find((feat: any) => feat.id === id);
-    if (f) tableRows.push(["System Module", f.label, `$${Math.round(f.price).toLocaleString()}`]);
-  });
-  
-  const host = pricingData.infrastructure.hosting.find((h:any) => h.id === selectedHosting);
-  tableRows.push(["Cloud Hosting", host?.label || "Basic Tier", `$${Math.round(host?.price || 0).toLocaleString()}`]);
-
-  if (priceAdjustment && priceAdjustment.type !== 'none') {
-    const isDiscount = priceAdjustment.type === 'discount';
-    const label = isDiscount ? 'Plan Reward / Discount' : 'Payment Plan Surcharge';
-    const sign = isDiscount ? '-' : '+';
-    tableRows.push([
-      label, 
-      `${paymentPlan.toUpperCase()} (${sign}${priceAdjustment.percent}%)`, 
-      `${sign}$${Math.round(priceAdjustment.amount).toLocaleString()}`
-    ]);
-  }
-
-  autoTable(doc, {
-    startY: 33,
-    head: [['Deliverable', 'Description', 'Amount (AUD)']],
-    body: tableRows,
-    theme: 'striped',
-    headStyles: { fillColor: [10, 10, 10], fontStyle: 'bold' },
-    didParseCell: (data) => {
-      const isLastRow = data.row.index === tableRows.length - 1;
-      if (data.section === 'body' && isLastRow && priceAdjustment?.type !== 'none') {
-        data.cell.styles.fontStyle = 'bold';
-        if (priceAdjustment.type === 'discount') {
-          data.cell.styles.textColor = [16, 185, 129];
-        } else {
-          data.cell.styles.textColor = [249, 115, 22];
-        }
-      }
-    },
-    foot: [[`TOTAL PROJECT INVESTMENT`, paymentPlan.toUpperCase(), `$${finalPrice.toLocaleString()}`]],
-    footStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 11 }
-  });
-
-  // --- 5. ROADMAP ENGINE ---
+  // --- 4. ITEMISED MODULAR INVESTMENT & HOURS TABLE ---
   doc.addPage();
   doc.setTextColor(10, 10, 10);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.text("EXECUTION & PAYMENT ROADMAP", 14, 25);
+  doc.text("ITEMISED MODULAR SCOPE & INVESTMENT", 14, 25);
 
-  const roadmapRows: any[][] = [];
-  if (paymentPlan === "50-50") {
-    const half = Math.round(finalPrice / 2);
-    roadmapRows.push([formatDate(0), "Commencement Deposit", `$${half.toLocaleString()}`]);
-    roadmapRows.push([formatDate(totalDays), "Project Handover", `$${half.toLocaleString()}`]);
-  } else if (paymentPlan === "milestones") { 
-    const amount = Math.round(finalPrice / 10);
-    const interval = totalDays / 9; 
-    const milestoneNames = ["Discovery", "UI/UX Sign-off", "Infrastructure", "Frontend", "Alpha", "APIs", "Refinement", "Beta QA", "Security", "Deployment"];
-    for (let i = 0; i < 10; i++) {
-      roadmapRows.push([formatDate(Math.round(i * interval)), `Milestone ${i + 1}: ${milestoneNames[i]}`, `$${amount.toLocaleString()}`]);
-    }
-  } else {
-    let daysBetween = (paymentPlan === "daily") ? 1 : (paymentPlan === "fortnightly") ? 14 : (paymentPlan === "monthly") ? 30 : 7;
-    const iterations = Math.ceil(totalDays / daysBetween);
-    const installment = Math.round(finalPrice / iterations);
-    for (let i = 0; i < iterations; i++) {
-      const day = i * daysBetween;
-      if (day > totalDays) break;
-      roadmapRows.push([formatDate(day), `${paymentPlan} Payment ${i + 1}`, `$${installment.toLocaleString()}`]);
-    }
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.text(
+    `Currency: ${currency} | Total Engineering Effort: ${totals.totalHours} hrs (~${totals.estimatedDays} business days)`,
+    14,
+    31
+  );
+
+  const tableRows: any[][] = [
+    [
+      "Solution Base",
+      `${projectType.title} — ${projectType.subtitle}`,
+      `${projectType.baseHours} hrs`,
+      formatCurrency(projectType.basePrice),
+    ],
+  ];
+
+  selectedModules.forEach((mod) => {
+    tableRows.push([
+      mod.category,
+      mod.name,
+      `${mod.hours} hrs`,
+      formatCurrency(mod.price),
+    ]);
+  });
+
+  tableRows.push([
+    "Managed Care",
+    `Cloud Hosting, SSL & Maintenance (${contract.label})`,
+    "Included",
+    formatCurrency(0),
+  ]);
+
+  if (contract.discountPercent > 0 && totals.discountAmount > 0) {
+    tableRows.push([
+      "Contract Reward",
+      `${contract.label} Commitment Discount (-${contract.discountPercent}%)`,
+      "—",
+      `-${formatCurrency(totals.discountAmount)}`,
+    ]);
   }
 
   autoTable(doc, {
-    startY: 33,
-    head: [['Scheduled Date', 'Milestone / Phase', 'Due (AUD)']],
-    body: roadmapRows,
-    theme: 'grid',
+    startY: 37,
+    head: [["Category", "Module / Deliverable", "Est. Hours", `Value (${currency})`]],
+    body: tableRows,
+    theme: "striped",
+    headStyles: { fillColor: [10, 10, 10], fontStyle: "bold" },
+    columnStyles: {
+      2: { halign: "right" },
+      3: { halign: "right", fontStyle: "bold" },
+    },
+    didParseCell: (cellData) => {
+      const isLastRow = cellData.row.index === tableRows.length - 1;
+      if (cellData.section === "body" && isLastRow && contract.discountPercent > 0) {
+        cellData.cell.styles.fontStyle = "bold";
+        cellData.cell.styles.textColor = [16, 185, 129];
+      }
+    },
+    foot: [
+      [
+        `TOTAL CONTRACT VALUE (${contract.weeks} WEEKS)`,
+        `${formatCurrency(totals.weeklyPayment, true)} / week`,
+        `${totals.totalHours} hrs`,
+        formatCurrency(totals.totalPrice),
+      ],
+    ],
+    footStyles: {
+      fillColor: [37, 99, 235],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 10,
+    },
+  });
+
+  // --- 5. DELIVERY TIMELINE & WEEKLY PAYMENT SCHEDULE ---
+  doc.addPage();
+  doc.setTextColor(10, 10, 10);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("DELIVERY & WEEKLY SUBSCRIPTION SCHEDULE", 14, 25);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(90, 90, 90);
+  doc.text(
+    `Estimated Build Completion: ${formatDate(totals.estimatedDays)} (${totals.totalHours} hrs) | Subscription: ${contract.weeks} weekly payments of ${formatCurrency(totals.weeklyPayment, true)}`,
+    14,
+    31
+  );
+
+  // Summary box of the 4 delivery phases + weekly payment schedule
+  const phaseInterval = Math.max(1, Math.round(totals.estimatedDays / 4));
+  const deliveryPhases = [
+    [formatDate(0), "Phase 1: Kickoff, Architecture & Initial Weekly Payment", "Week 1", formatCurrency(totals.weeklyPayment, true)],
+    [formatDate(phaseInterval), "Phase 2: UI/UX & Core Module Engineering", `Week ${Math.max(2, Math.ceil(phaseInterval / 7))}`, "Active Weekly Billing"],
+    [formatDate(phaseInterval * 2), "Phase 3: Integrations, QA & Staging Review", `Week ${Math.max(3, Math.ceil((phaseInterval * 2) / 7))}`, "Active Weekly Billing"],
+    [formatDate(totals.estimatedDays), "Phase 4: Production Launch & Handover", `Week ${Math.max(4, Math.ceil(totals.estimatedDays / 7))}`, "Active Weekly Billing"],
+  ];
+
+  autoTable(doc, {
+    startY: 37,
+    head: [["Target Date", "Engineering Milestone", "Timeline", "Billing Status"]],
+    body: deliveryPhases,
+    theme: "grid",
+    headStyles: { fillColor: [24, 24, 27] },
+  });
+
+  const scheduleStartY = ((doc as any).lastAutoTable?.finalY || 80) + 12;
+
+  doc.setTextColor(10, 10, 10);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text(`WEEKLY PAYMENT LEDGER (${contract.weeks} WEEKS — ${contract.label.toUpperCase()})`, 14, scheduleStartY);
+
+  const weeklyRows: any[][] = [];
+  for (let w = 1; w <= contract.weeks; w++) {
+    const dueDate = formatDate((w - 1) * 7);
+    weeklyRows.push([
+      `Week ${w} of ${contract.weeks}`,
+      dueDate,
+      `${projectType.title} Subscription`,
+      formatCurrency(totals.weeklyPayment, true),
+    ]);
+  }
+
+  autoTable(doc, {
+    startY: scheduleStartY + 5,
+    head: [["Installment", "Scheduled Date", "Description", `Weekly Due (${currency})`]],
+    body: weeklyRows,
+    theme: "striped",
+    styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [10, 10, 10] },
-    columnStyles: { 2: { textColor: [37, 99, 235], fontStyle: 'bold' } },
-    didDrawCell: (data) => {
-      if (data.section === 'body' && data.column.index === 2 && data.cell.raw) {
-        const rawValue = String(data.cell.raw);
-        const cleanAmount = rawValue.replace(/\D/g, ''); 
-        const amount = parseInt(cleanAmount, 10);
-        
-        if (!isNaN(amount)) {
-          const rowPaypalUrl = `https://paypal.me/wirednomadAU/${amount}`;
-          doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: rowPaypalUrl });
+    columnStyles: { 3: { textColor: [37, 99, 235], fontStyle: "bold", halign: "right" } },
+    didDrawCell: (cellData) => {
+      if (cellData.section === "body" && cellData.column.index === 3 && cellData.cell.raw) {
+        const numericAmount = Number(totals.weeklyPayment.toFixed(2));
+        if (!isNaN(numericAmount) && numericAmount > 0) {
+          const rowPaypalUrl = `https://paypal.me/wirednomadAU/${numericAmount}${currency}`;
+          doc.link(cellData.cell.x, cellData.cell.y, cellData.cell.width, cellData.cell.height, {
+            url: rowPaypalUrl,
+          });
         }
       }
-    }
+    },
   });
 
   // --- 6. SIGN OFF & SAVE ---
-  let signY = (doc as any).lastAutoTable?.finalY + 40;
-  if (signY > 250) { doc.addPage(); signY = 40; }
-  
+  let signY = ((doc as any).lastAutoTable?.finalY || 200) + 20;
+  if (signY > 265) {
+    doc.addPage();
+    signY = 30;
+  }
+
   doc.setFillColor(16, 185, 129);
-  doc.circle(16, signY - 1, 1, 'F');
+  doc.circle(16, signY - 1, 1, "F");
   doc.setFontSize(7);
   doc.setTextColor(100, 100, 100);
   doc.setFont("helvetica", "bold");
@@ -297,20 +393,28 @@ By proceeding with the initial payment, I hereby accept the terms and conditions
 
   doc.setFontSize(8);
   doc.setFont("helvetica", "italic");
-  doc.text(`WiredNomad Engineering | Ref: ${refCode} | Generated: ${today.toLocaleDateString()}`, 14, signY + 10);
+  doc.text(
+    `WiredNomad Engineering | Ref: ${refCode} | Currency: ${currency} | Generated: ${today.toLocaleDateString("en-AU")}`,
+    14,
+    signY + 8
+  );
 
   // Email Trigger
-  const pdfBase64 = doc.output('datauristring').split(',')[1];
-  fetch('/api/send-agreement', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const pdfBase64 = doc.output("datauristring").split(",")[1];
+  fetch("/api/send-agreement", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       pdfBase64,
       refCode,
+      currency,
+      contractYears: contract.years,
+      weeklyPayment: totals.weeklyPayment,
+      totalPrice: totals.totalPrice,
       clientName: `${client.firstName} ${client.lastName}`,
-      clientEmail: client.email
+      clientEmail: client.email,
     }),
-  }).catch(err => console.error("Email notification failed:", err));
+  }).catch((err) => console.error("Email notification failed:", err));
 
-  doc.save(`WiredNomad_Agreement_${refCode}.pdf`);
+  doc.save(`WiredNomad_Agreement_${refCode}_${currency}.pdf`);
 };
